@@ -1,0 +1,15 @@
+[Unit]
+Description=Magnavox 2000 Music Player
+After=pipewire-pulse.service
+
+[Service]
+ExecStartPre=-/usr/bin/killall -9 ffplay
+ExecStart=/usr/bin/python3 INSTALL_DIR_PLACEHOLDER/app/app.py
+WorkingDirectory=INSTALL_DIR_PLACEHOLDER/app
+Restart=always
+RestartSec=5
+Environment=PULSE_SERVER=unix:/run/user/INSTALL_UID_PLACEHOLDER/pulse/native
+Environment=XDG_RUNTIME_DIR=/run/user/INSTALL_UID_PLACEHOLDER
+
+[Install]
+WantedBy=default.target

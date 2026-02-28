@@ -1,0 +1,40 @@
+# OAuth tokens and credentials
+oauth.json
+oauth_config.json
+
+# Runtime data (generated per-device)
+history.json
+service.json
+volume.json
+
+# Legacy auth
+cookies.txt
+
+# Backup files
+*.backup
+*.bak
+*.pre-oauth
+*.broken
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Logs
+*.log
+
+# SD card image artifacts
+*.img
+*.img.xz
+*.img.gz
+
+# OS files
+.DS_Store
+Thumbs.db

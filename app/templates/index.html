@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnavox 2000</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Courier New', 'Courier', monospace;
+            background: #000;
+            color: #6a9955;
+            min-height: 100vh;
+            padding: 10px;
+        }
+        .player {
+            max-width: 600px;
+            margin: 0 auto 10px auto;
+            background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+            border: 3px ridge #4a6a4a;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 0 15px rgba(106, 153, 85, 0.2), inset 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            position: relative;
+            border-bottom: 2px solid #4a6a4a;
+            padding-bottom: 8px;
+        }
+        h1 {
+            font-family: 'Michroma', 'Eurostile', sans-serif;
+            font-size: 1.3rem;
+            color: #6a9955;
+            text-shadow: 0 0 8px rgba(106, 153, 85, 0.5);
+            letter-spacing: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .bt-status {
+            position: absolute;
+            right: 0;
+            top: 0;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #6a9955;
+            cursor: pointer;
+        }
+        .bt-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #6a9955;
+            box-shadow: 0 0 4px rgba(106, 153, 85, 0.5);
+        }
+        .bt-dot.connected { background: #6a9955; animation: pulse 1s infinite; }
+        .bt-dot.disconnected { background: #c24848; box-shadow: 0 0 4px rgba(194, 72, 72, 0.5); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .input-group {
+            position: relative;
+            display: flex;
+            margin-bottom: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            padding-right: 50px;
+            border: 2px solid #4a6a4a;
+            background: #000;
+            color: #6a9955;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            outline: none;
+            box-shadow: inset 0 0 5px rgba(106, 153, 85, 0.2);
+        }
+        input[type="text"]:focus {
+            border-color: #5a8a6a;
+            box-shadow: 0 0 8px rgba(90, 138, 106, 0.4), inset 0 0 5px rgba(106, 153, 85, 0.2);
+        }
+        .input-group .go-btn {
+            position: absolute;
+            right: 3px;
+            top: 3px;
+            bottom: 3px;
+            padding: 0 10px;
+            background: linear-gradient(145deg, #4a6a4a, #3a5a3a);
+            color: #6a9955;
+            border: 1px solid #5a7a5a;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        .input-group .go-btn:active {
+            background: linear-gradient(145deg, #3a5a3a, #2a4a2a);
+        }
+        .controls {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 15px;
+            border: 2px outset #5a7a5a;
+            font-size: 0.85rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            background: linear-gradient(145deg, #4a6a4a, #3a5a3a);
+            color: #000;
+        }
+        button:active {
+            border-style: inset;
+            background: linear-gradient(145deg, #3a5a3a, #2a4a2a);
+        }
+        .btn-play { background: linear-gradient(145deg, #5a8a5a, #4a7a4a); }
+        .btn-pause { background: linear-gradient(145deg, #8a8a4a, #7a7a3a); color: #000; }
+        .btn-stop { background: linear-gradient(145deg, #8a4a4a, #7a3a3a); }
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #000;
+            border: 1px solid #4a6a4a;
+        }
+        .player-info label {
+            min-width: 55px;
+            font-size: 0.75rem;
+            color: #6a9955;
+        }
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: #000;
+            outline: none;
+            border: 1px solid #4a6a4a;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #6a9955;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 4px rgba(106, 153, 85, 0.5);
+        }
+        .now-playing-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+            padding: 8px;
+            background: #000;
+            border: 2px solid #4a6a4a;
+        }
+        #thumbnail {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            background: #000;
+            border: 2px solid #4a6a4a;
+            display: none;
+        }
+        #thumbnail.visible {
+            display: block;
+        }
+        .now-playing-text {
+            flex: 1;
+            min-width: 0;
+        }
+        #now-playing {
+            font-size: 0.85rem;
+            color: #7ac5cd;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+        #status {
+            font-size: 0.7rem;
+            color: #6a9955;
+        }
+        #status.error {
+            color: #c24848;
+        }
+
+        /* Progress bar */
+        .progress-section {
+            display: none;
+            padding: 4px 8px;
+            background: #000;
+            border: 1px solid #4a6a4a;
+            border-top: none;
+            margin-top: 0;
+        }
+        .progress-section.visible { display: block; }
+        .progress-bar-container {
+            width: 100%;
+            height: 10px;
+            background: #1a1a1a;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 3px;
+            cursor: pointer;
+            padding: 3px 0;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: #6a9955;
+            width: 0%;
+            transition: width 1s linear;
+            border-radius: 2px;
+        }
+        .progress-time {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: #5a8a5a;
+        }
+
+        /* Equalizer Visualizer */
+        .visualizer {
+            width: 100%;
+            height: 60px;
+            background: #000;
+            border: 2px solid #4a6a4a;
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 2px;
+            padding: 0 5px 2px 5px;
+        }
+        .viz-column {
+            flex: 1;
+            min-width: 3px;
+            max-width: 10px;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 1px;
+        }
+        .viz-block {
+            width: 100%;
+            height: 4px;
+            background: #111;
+            border-radius: 1px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border: 2px solid #4a6a4a;
+            background: #000;
+            max-width: 600px;
+            margin: 0 auto 10px auto;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px 5px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #5a8a5a;
+            background: #000;
+            border-right: 1px solid #4a6a4a;
+            transition: all 0.2s;
+        }
+        .tab:last-child { border-right: none; }
+        .tab.active {
+            color: #000;
+            background: #6a9955;
+            text-shadow: none;
+        }
+        .tab:hover {
+            background: #1a2a1a;
+        }
+
+        /* Track list */
+        .tab-content {
+            display: none;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .tab-content.active { display: block; }
+        .track-list {
+            padding: 5px;
+            background: #000;
+            border: 2px solid #4a6a4a;
+        }
+        .track {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            margin: 3px 0;
+            background: #0a1a0a;
+            border: 1px solid #3a5a3a;
+            cursor: pointer;
+            transition: all 0.2s;
+            gap: 8px;
+        }
+        .track:hover {
+            background: #1a2a1a;
+            border-color: #5a7a5a;
+            box-shadow: 0 0 4px rgba(106, 153, 85, 0.3);
+        }
+        .track:active {
+            background: #4a6a4a;
+            color: #000;
+        }
+        .track-thumbnail {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            background: #000;
+            border: 1px solid #4a6a4a;
+            flex-shrink: 0;
+        }
+        .track-play {
+            color: #6a9955;
+            font-size: 1rem;
+            flex-shrink: 0;
+            width: 20px;
+        }
+        .track-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .track-title {
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #6a9955;
+        }
+        .track-delete {
+            color: #5a5a5a;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            width: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .track-delete:hover {
+            color: #c24848;
+        }
+        .loading-msg {
+            text-align: center;
+            padding: 20px;
+            color: #5a8a5a;
+            font-size: 0.85rem;
+        }
+        .load-more {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: linear-gradient(145deg, #4a6a4a, #3a5a3a);
+            color: #000;
+            border: 2px outset #5a7a5a;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .load-more:hover {
+            box-shadow: 0 0 6px rgba(106, 153, 85, 0.4);
+        }
+        .load-more:active {
+            border-style: inset;
+        }
+
+        /* Auth overlay */
+        .auth-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .auth-overlay.active { display: flex; }
+        .auth-box {
+            max-width: 400px;
+            padding: 25px;
+            background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+            border: 3px ridge #4a6a4a;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(106, 153, 85, 0.3);
+        }
+        .auth-box h2 {
+            font-family: 'Michroma', sans-serif;
+            color: #6a9955;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+        .auth-box p {
+            color: #6a9955;
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        .auth-code {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #7ac5cd;
+            letter-spacing: 6px;
+            padding: 12px;
+            background: #000;
+            border: 2px solid #4a6a4a;
+            margin: 12px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .auth-link {
+            color: #7ac5cd;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .auth-btn {
+            margin-top: 15px;
+            padding: 10px 25px;
+            background: linear-gradient(145deg, #5a8a5a, #4a7a4a);
+            color: #000;
+            border: 2px outset #5a7a5a;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .auth-btn:active { border-style: inset; }
+        .auth-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-overlay" id="auth-overlay">
+        <div class="auth-box">
+            <h2>Sign In</h2>
+            <p id="auth-msg">Connect your music account to get started.</p>
+            <div id="auth-code-display" style="display:none;">
+                <p>Scan with your phone or visit the link below:</p>
+                <img id="auth-qr" src="" alt="QR Code" style="width:180px;height:180px;margin:10px auto;display:block;background:#fff;padding:6px;border-radius:4px;" />
+                <p><a class="auth-link" id="auth-url" href="#" target="_blank"></a></p>
+                <p>Enter this code:</p>
+                <div class="auth-code" id="auth-code"></div>
+            </div>
+            <button class="auth-btn" id="auth-btn" onclick="startAuth()">Sign In</button>
+            <button class="auth-btn" id="auth-back-btn" onclick="authGoBack()" style="display:none;margin-top:8px;background:linear-gradient(145deg,#4a4a4a,#3a3a3a);border-color:#5a5a5a;">Back</button>
+        </div>
+    </div>
+    <div class="player">
+        <div class="header">
+            <h1>Magnavox 2000</h1>
+            <div class="bt-status" id="bt-status">
+                <div class="bt-dot" id="bt-dot"></div>
+                <span id="bt-name">...</span>
+            </div>
+        </div>
+        <div style="text-align:center;margin-bottom:8px;">
+            <select id="service-select" onchange="switchService(this.value)" style="background:#000;color:#6a9955;border:1px solid #4a6a4a;font-family:'Courier New',monospace;font-size:0.75rem;padding:3px 6px;outline:none;cursor:pointer;">
+            </select>
+        </div>
+        <div class="input-group">
+            <input type="text" id="url" placeholder="Paste URL..." />
+            <button class="go-btn" id="go-btn" onclick="playUrl()" style="display:none">Go</button>
+        </div>
+        <div class="controls">
+            <button class="btn-play" id="play-pause-btn" onclick="playPause()">Play</button>
+            <label id="auto-next-toggle" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;color:#6a9955;margin-left:8px;user-select:none;">
+                <input type="checkbox" id="auto-next-cb" onchange="toggleAutoNext(this.checked)" style="accent-color:#6a9955;cursor:pointer;">
+                Auto Next
+            </label>
+        </div>
+        <div class="player-info">
+            <label>Vol: <span id="vol-val">--</span>%</label>
+            <input type="range" id="volume" min="0" max="100" value="50" oninput="setVolume(this.value)">
+        </div>
+        <div class="now-playing-section">
+            <img id="thumbnail" src="" alt="">
+            <div class="now-playing-text">
+                <div id="now-playing">Ready</div>
+                <div id="status"></div>
+            </div>
+        </div>
+        <div class="progress-section" id="progress-section">
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+            </div>
+            <div class="progress-time">
+                <span id="progress-elapsed">0:00</span>
+                <span id="progress-duration">0:00</span>
+            </div>
+        </div>
+        <div class="visualizer" id="visualizer"></div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab" onclick="switchTab('history')">History</div>
+        <div class="tab" onclick="switchTab('liked')">Liked</div>
+        <div class="tab" onclick="switchTab('playlists')">Playlists</div>
+        <div class="tab" onclick="switchTab('search')">Search</div>
+    </div>
+
+    <div id="tab-history" class="tab-content">
+        <div class="track-list" id="history-list">
+            <div class="loading-msg">Loading...</div>
+        </div>
+    </div>
+    <div id="tab-liked" class="tab-content">
+        <div class="track-list" id="liked-list">
+            <div class="loading-msg">Loading...</div>
+        </div>
+    </div>
+    <div id="tab-playlists" class="tab-content">
+        <div class="track-list" id="playlists-list">
+            <div class="loading-msg">Loading...</div>
+        </div>
+    </div>
+    <div id="tab-search" class="tab-content">
+        <div style="padding: 0.75rem;">
+            <div class="input-group">
+                <input type="text" id="search-query" placeholder="Search..." />
+                <button onclick="doSearch()">Search</button>
+            </div>
+        </div>
+        <div class="track-list" id="search-list"></div>
+    </div>
+
+    <script>
+        var tabNames = ['history', 'liked', 'playlists', 'search'];
+        var tabData = { history: [], liked: [], playlists: [], search: [] };
+        var tabLoaded = { history: false, liked: false, playlists: false };
+        var currentPlaylist = null; // when viewing tracks inside a playlist
+        var currentPlaylistTracks = []; // tracks loaded inside a playlist (for auto-next)
+
+        // Auto-next state
+        var autoNextEnabled = localStorage.getItem('autoNextEnabled') !== 'false'; // default on
+        var autoNextSource = null;  // 'history', 'liked', 'playlist', 'search', or null
+        var autoNextIndex = -1;
+        var wasPlaying = false; // for detecting Playing→Idle transition
+
+        // Progress tracking
+        var progressElapsed = 0;
+        var progressDuration = 0;
+        var progressPlaying = false;
+
+        function formatTime(secs) {
+            secs = Math.max(0, Math.floor(secs));
+            var m = Math.floor(secs / 60);
+            var s = secs % 60;
+            return m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        function updateProgressUI() {
+            var section = document.getElementById('progress-section');
+            if (progressDuration > 0) {
+                section.classList.add('visible');
+                document.getElementById('progress-elapsed').textContent = formatTime(progressElapsed);
+                document.getElementById('progress-duration').textContent = formatTime(progressDuration);
+                var pct = Math.min(100, (progressElapsed / progressDuration) * 100);
+                document.getElementById('progress-bar').style.width = pct + '%';
+            } else {
+                section.classList.remove('visible');
+            }
+        }
+
+        // Tick elapsed every second for smooth updates
+        setInterval(function() {
+            if (progressPlaying && progressDuration > 0) {
+                progressElapsed = Math.min(progressElapsed + 1, progressDuration);
+                updateProgressUI();
+            }
+        }, 1000);
+
+        // Seek on progress bar click
+        document.getElementById('progress-bar').parentElement.addEventListener('click', function(e) {
+            if (progressDuration <= 0) return;
+            var rect = this.getBoundingClientRect();
+            var pct = (e.clientX - rect.left) / rect.width;
+            var pos = Math.floor(pct * progressDuration);
+            pos = Math.max(0, Math.min(pos, progressDuration));
+            progressElapsed = pos;
+            updateProgressUI();
+            fetch('/seek', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({position: pos})
+            });
+        });
+
+        async function api(endpoint, data) {
+            var s = document.getElementById('status');
+            try {
+                var r = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data || {})
+                });
+                var j = await r.json();
+                if (j.error) {
+                    s.textContent = j.error;
+                    s.classList.add('error');
+                } else {
+                    s.textContent = j.status || '';
+                    s.classList.remove('error');
+                }
+                if (j.title) {
+                    document.getElementById('now-playing').textContent = j.title;
+                }
+                if (j.thumbnail) {
+                    var thumb = document.getElementById('thumbnail');
+                    thumb.src = j.thumbnail;
+                    thumb.classList.add('visible');
+                } else if (j.hasOwnProperty('thumbnail') && j.thumbnail === '') {
+                    document.getElementById('thumbnail').classList.remove('visible');
+                }
+                return j;
+            } catch(e) {
+                s.textContent = 'Error: ' + e.message;
+                s.classList.add('error');
+            }
+        }
+
+        function playUrl() {
+            var url = document.getElementById('url').value.trim();
+            if (!url) return;
+            localStorage.setItem('lastPlayingUrl', url);
+            localStorage.removeItem('lastPlayingId');
+            localStorage.removeItem('lastPlayingTitle');
+            document.getElementById('status').textContent = 'Resolving audio...';
+            document.getElementById('status').classList.remove('error');
+            isPlaying = true;
+            isPaused = false;
+            autoNextSource = null;
+            autoNextIndex = -1;
+            updatePlayPauseBtn();
+            document.getElementById('url').value = '';
+            document.getElementById('go-btn').style.display = 'none';
+            api('/play', {url: url});
+        }
+
+        function playTrack(id, title, source, index) {
+            localStorage.setItem('lastPlayingId', id);
+            localStorage.setItem('lastPlayingTitle', title);
+            localStorage.removeItem('lastPlayingUrl');
+            document.getElementById('url').value = '';
+            document.getElementById('go-btn').style.display = 'none';
+            document.getElementById('now-playing').textContent = title;
+            document.getElementById('status').textContent = 'Resolving audio...';
+            document.getElementById('status').classList.remove('error');
+            isPlaying = true;
+            isPaused = false;
+            if (source !== undefined && index !== undefined) {
+                autoNextSource = source;
+                autoNextIndex = index;
+            }
+            updatePlayPauseBtn();
+            api('/play', {id: id, title: title});
+        }
+
+        function toggleAutoNext(checked) {
+            autoNextEnabled = checked;
+            localStorage.setItem('autoNextEnabled', checked ? 'true' : 'false');
+        }
+
+        var isPaused = false;
+        var isPlaying = false;
+
+        async function playPause() {
+            if (isPlaying && !isPaused) {
+                // Currently playing — pause it
+                var j = await api('/pause');
+                if (j && j.paused !== undefined) {
+                    isPaused = j.paused;
+                    vizActive = !j.paused;
+                    updatePlayPauseBtn();
+                }
+            } else if (isPlaying && isPaused) {
+                // Currently paused — resume it
+                var j = await api('/pause');
+                if (j && j.paused !== undefined) {
+                    isPaused = j.paused;
+                    vizActive = !j.paused;
+                    updatePlayPauseBtn();
+                }
+            } else {
+                // Nothing playing — start something
+                var url = document.getElementById('url').value.trim();
+                if (url) {
+                    playUrl();
+                    return;
+                }
+                var lastId = localStorage.getItem('lastPlayingId');
+                var lastTitle = localStorage.getItem('lastPlayingTitle');
+                if (lastId && lastTitle) {
+                    playTrack(lastId, lastTitle);
+                    return;
+                }
+                var lastUrl = localStorage.getItem('lastPlayingUrl');
+                if (lastUrl) {
+                    document.getElementById('url').value = lastUrl;
+                    playUrl();
+                }
+            }
+        }
+        function updatePlayPauseBtn() {
+            var btn = document.getElementById('play-pause-btn');
+            if (isPlaying && !isPaused) {
+                btn.textContent = 'Pause';
+                btn.className = 'btn-pause';
+            } else {
+                btn.textContent = 'Play';
+                btn.className = 'btn-play';
+            }
+        }
+        var volumeDragging = false;
+        function setVolume(v) {
+            document.getElementById('vol-val').textContent = v;
+            api('/volume', {volume: parseInt(v)});
+        }
+        (function() {
+            var slider = document.getElementById('volume');
+            slider.addEventListener('mousedown', function() { volumeDragging = true; });
+            slider.addEventListener('mouseup', function() { volumeDragging = false; });
+            slider.addEventListener('touchstart', function() { volumeDragging = true; });
+            slider.addEventListener('touchend', function() { volumeDragging = false; });
+        })();
+
+        document.getElementById('url').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') playUrl();
+        });
+        document.getElementById('url').addEventListener('input', function() {
+            document.getElementById('go-btn').style.display = this.value.trim() ? '' : 'none';
+        });
+        document.getElementById('search-query').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') doSearch();
+        });
+
+        function switchTab(name) {
+            currentPlaylist = null;
+            var tabEl = document.querySelector('.tab[onclick="switchTab(\'' + name + '\')"]');
+            var content = document.getElementById('tab-' + name);
+            var isOpen = content.classList.contains('active');
+
+            // Close all tabs first
+            tabNames.forEach(function(t) {
+                document.querySelector('.tab[onclick="switchTab(\'' + t + '\')"]').classList.remove('active');
+                document.getElementById('tab-' + t).classList.remove('active');
+            });
+
+            // If it was closed, open it
+            if (!isOpen) {
+                tabEl.classList.add('active');
+                content.classList.add('active');
+            }
+        }
+
+        function renderTracks(listId, tracks, showMore, tabName) {
+            var el = document.getElementById(listId);
+            el.innerHTML = '';
+            if (tracks.length === 0) {
+                el.innerHTML = '<div class="loading-msg">No results</div>';
+                return;
+            }
+            tracks.forEach(function(t, idx) {
+                var div = document.createElement('div');
+                div.className = 'track';
+                div.onclick = (function(i) { return function() { playTrack(t.id, t.title, tabName, i); }; })(idx);
+                var thumb = t.thumbnail || '';
+                var deleteHtml = '';
+                if (tabName === 'history') {
+                    deleteHtml = '<div class="track-delete" title="Remove from history" data-id="' + escHtml(t.id) + '">&#10005;</div>';
+                }
+                div.innerHTML = '<img class="track-thumbnail" src="' + escHtml(thumb) + '" alt="">' +
+                    '<div class="track-info"><div class="track-title">' +
+                    escHtml(t.title) + '</div></div>' +
+                    deleteHtml +
+                    '<div class="track-play">&#9654;</div>';
+                if (tabName === 'history') {
+                    var delBtn = div.querySelector('.track-delete');
+                    if (delBtn) {
+                        delBtn.onclick = (function(trackId) {
+                            return function(e) {
+                                e.stopPropagation();
+                                deleteHistoryTrack(trackId);
+                            };
+                        })(t.id);
+                    }
+                }
+                el.appendChild(div);
+            });
+            if (showMore) {
+                var btn = document.createElement('button');
+                btn.className = 'load-more';
+                btn.textContent = 'Load more...';
+                btn.onclick = function() { loadTab(tabName, tracks.length); };
+                el.appendChild(btn);
+            }
+        }
+
+        function escHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        async function loadTab(name, offset) {
+            offset = offset || 0;
+            var listId = name + '-list';
+            var el = document.getElementById(listId);
+            if (offset === 0) {
+                el.innerHTML = '<div class="loading-msg">Loading...</div>';
+            } else {
+                var btn = el.querySelector('.load-more');
+                if (btn) btn.textContent = 'Loading...';
+            }
+
+            try {
+                var r = await fetch('/library/' + name + '?offset=' + offset + '&limit=20');
+                var j = await r.json();
+                if (j.error) {
+                    el.innerHTML = '<div class="loading-msg">' + escHtml(j.error) + '</div>';
+                    return;
+                }
+                if (offset === 0) {
+                    tabData[name] = j.tracks;
+                } else {
+                    tabData[name] = tabData[name].concat(j.tracks);
+                }
+                tabLoaded[name] = true;
+                renderTracks(listId, tabData[name], j.has_more, name);
+            } catch(e) {
+                el.innerHTML = '<div class="loading-msg">Failed to load</div>';
+            }
+        }
+
+        async function loadPlaylists() {
+            var el = document.getElementById('playlists-list');
+            el.innerHTML = '<div class="loading-msg">Loading playlists...</div>';
+            try {
+                var r = await fetch('/library/playlists');
+                var j = await r.json();
+                if (j.error) {
+                    el.innerHTML = '<div class="loading-msg">' + escHtml(j.error) + '</div>';
+                    return;
+                }
+                tabLoaded.playlists = true;
+                renderPlaylists(j.playlists);
+            } catch(e) {
+                el.innerHTML = '<div class="loading-msg">Failed to load playlists</div>';
+            }
+        }
+
+        function renderPlaylists(playlists) {
+            var el = document.getElementById('playlists-list');
+            el.innerHTML = '';
+            if (playlists.length === 0) {
+                el.innerHTML = '<div class="loading-msg">No playlists found</div>';
+                return;
+            }
+            playlists.forEach(function(p) {
+                var div = document.createElement('div');
+                div.className = 'track';
+                div.onclick = function() { openPlaylist(p.id, p.title); };
+                var thumb = p.thumbnail || '';
+                div.innerHTML = '<img class="track-thumbnail" src="' + escHtml(thumb) + '" alt="">' +
+                    '<div class="track-info"><div class="track-title">' +
+                    escHtml(p.title) + '</div></div>' +
+                    '<div style="color:#666;font-size:0.8rem;">&#9654;</div>';
+                el.appendChild(div);
+            });
+        }
+
+        async function openPlaylist(playlistId, playlistTitle) {
+            currentPlaylist = { id: playlistId, title: playlistTitle };
+            currentPlaylistTracks = [];
+            var el = document.getElementById('playlists-list');
+            // Show back button + playlist title + loading
+            el.innerHTML = '<div class="track" onclick="backToPlaylists()" style="background:#0f3460;">' +
+                '<div class="track-play" style="color:#e94560;">&#8592;</div>' +
+                '<div class="track-info"><div class="track-title">' +
+                escHtml(playlistTitle) + '</div></div></div>' +
+                '<div class="loading-msg">Loading tracks...</div>';
+            try {
+                var r = await fetch('/library/playlist_tracks?list=' + encodeURIComponent(playlistId) + '&limit=30');
+                var j = await r.json();
+                if (j.error) {
+                    el.innerHTML = '<div class="track" onclick="backToPlaylists()" style="background:#0f3460;">' +
+                        '<div class="track-play" style="color:#e94560;">&#8592;</div>' +
+                        '<div class="track-info"><div class="track-title">Back to Playlists</div></div></div>' +
+                        '<div class="loading-msg">' + escHtml(j.error) + '</div>';
+                    return;
+                }
+                currentPlaylistTracks = j.tracks.slice();
+                // Render back button + tracks
+                var backHtml = '<div class="track" onclick="backToPlaylists()" style="background:#0f3460;">' +
+                    '<div class="track-play" style="color:#e94560;">&#8592;</div>' +
+                    '<div class="track-info"><div class="track-title">' +
+                    escHtml(playlistTitle) + '</div></div></div>';
+                el.innerHTML = backHtml;
+                j.tracks.forEach(function(t, idx) {
+                    var div = document.createElement('div');
+                    div.className = 'track';
+                    div.onclick = (function(i) { return function() { playTrack(t.id, t.title, 'playlist', i); }; })(idx);
+                    var thumb = t.thumbnail || '';
+                    div.innerHTML = '<img class="track-thumbnail" src="' + escHtml(thumb) + '" alt="">' +
+                        '<div class="track-info"><div class="track-title">' +
+                        escHtml(t.title) + '</div></div>' +
+                        '<div class="track-play">&#9654;</div>';
+                    el.appendChild(div);
+                });
+                if (j.has_more) {
+                    var btn = document.createElement('button');
+                    btn.className = 'load-more';
+                    btn.textContent = 'Load more...';
+                    btn.onclick = function() { loadMorePlaylistTracks(playlistId, playlistTitle, j.tracks.length); };
+                    el.appendChild(btn);
+                }
+            } catch(e) {
+                el.innerHTML = '<div class="track" onclick="backToPlaylists()" style="background:#0f3460;">' +
+                    '<div class="track-play" style="color:#e94560;">&#8592;</div>' +
+                    '<div class="track-info"><div class="track-title">Back to Playlists</div></div></div>' +
+                    '<div class="loading-msg">Failed to load tracks</div>';
+            }
+        }
+
+        async function loadMorePlaylistTracks(playlistId, playlistTitle, offset) {
+            var el = document.getElementById('playlists-list');
+            var btn = el.querySelector('.load-more');
+            if (btn) btn.textContent = 'Loading...';
+            try {
+                var r = await fetch('/library/playlist_tracks?list=' + encodeURIComponent(playlistId) + '&offset=' + offset + '&limit=30');
+                var j = await r.json();
+                if (j.error) return;
+                if (btn) btn.remove();
+                var baseIdx = currentPlaylistTracks.length;
+                currentPlaylistTracks = currentPlaylistTracks.concat(j.tracks);
+                j.tracks.forEach(function(t, idx) {
+                    var div = document.createElement('div');
+                    div.className = 'track';
+                    var trackIdx = baseIdx + idx;
+                    div.onclick = (function(i) { return function() { playTrack(t.id, t.title, 'playlist', i); }; })(trackIdx);
+                    var thumb = t.thumbnail || '';
+                    div.innerHTML = '<img class="track-thumbnail" src="' + escHtml(thumb) + '" alt="">' +
+                        '<div class="track-info"><div class="track-title">' +
+                        escHtml(t.title) + '</div></div>' +
+                        '<div class="track-play">&#9654;</div>';
+                    el.appendChild(div);
+                });
+                if (j.has_more) {
+                    var newBtn = document.createElement('button');
+                    newBtn.className = 'load-more';
+                    newBtn.textContent = 'Load more...';
+                    newBtn.onclick = function() { loadMorePlaylistTracks(playlistId, playlistTitle, offset + j.tracks.length); };
+                    el.appendChild(newBtn);
+                }
+            } catch(e) {}
+        }
+
+        function backToPlaylists() {
+            currentPlaylist = null;
+            loadPlaylists();
+        }
+
+        async function doSearch() {
+            var q = document.getElementById('search-query').value.trim();
+            if (!q) return;
+            var el = document.getElementById('search-list');
+            el.innerHTML = '<div class="loading-msg">Searching...</div>';
+            try {
+                var r = await fetch('/library/search?q=' + encodeURIComponent(q) + '&limit=20');
+                var j = await r.json();
+                if (j.error) {
+                    el.innerHTML = '<div class="loading-msg">' + escHtml(j.error) + '</div>';
+                    return;
+                }
+                tabData.search = j.tracks;
+                renderTracks('search-list', j.tracks, false, 'search');
+            } catch(e) {
+                el.innerHTML = '<div class="loading-msg">Search failed</div>';
+            }
+        }
+
+        async function deleteHistoryTrack(trackId) {
+            try {
+                var r = await fetch('/library/history/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: trackId})
+                });
+                var j = await r.json();
+                if (j.success) {
+                    tabData.history = tabData.history.filter(function(t) { return t.id !== trackId; });
+                    renderTracks('history-list', tabData.history, false, 'history');
+                }
+            } catch(e) {}
+        }
+
+        async function refreshBt() {
+            try {
+                var r = await fetch('/bluetooth');
+                var j = await r.json();
+                var dot = document.getElementById('bt-dot');
+                var name = document.getElementById('bt-name');
+                if (j.connected) {
+                    dot.className = 'bt-dot connected';
+                    name.textContent = j.device_name;
+                } else {
+                    dot.className = 'bt-dot disconnected';
+                    name.textContent = 'Disconnected';
+                }
+            } catch(e) {
+                document.getElementById('bt-name').textContent = '?';
+            }
+        }
+
+        async function refreshVolume() {
+            if (volumeDragging) return;
+            try {
+                var r = await fetch('/volume');
+                var j = await r.json();
+                document.getElementById('volume').value = j.volume;
+                document.getElementById('vol-val').textContent = j.volume;
+            } catch(e) {}
+        }
+
+        // BT status and volume always load
+        refreshBt();
+        refreshVolume();
+
+        // Tabs and auto-resume only after auth is confirmed
+        async function initAfterAuth() {
+            try {
+                var r = await fetch('/auth/status');
+                var j = await r.json();
+                if (j.authenticated) {
+                    loadTab('history');
+                    loadTab('liked');
+                    loadPlaylists();
+                    // Show last played track info (but don't auto-play)
+                    var lastId = localStorage.getItem('lastPlayingId');
+                    var lastTitle = localStorage.getItem('lastPlayingTitle');
+                    if (lastId && lastTitle) {
+                        document.getElementById('now-playing').textContent = lastTitle;
+                    }
+                }
+            } catch(e) {}
+        }
+        initAfterAuth();
+
+        function autoPlayNext() {
+            if (!autoNextEnabled || !autoNextSource || autoNextIndex < 0) return;
+            var nextIdx = autoNextIndex + 1;
+            var tracks;
+            if (autoNextSource === 'playlist') {
+                tracks = currentPlaylistTracks;
+            } else {
+                tracks = tabData[autoNextSource];
+            }
+            if (tracks && nextIdx < tracks.length) {
+                var t = tracks[nextIdx];
+                playTrack(t.id, t.title, autoNextSource, nextIdx);
+            } else {
+                // End of list
+                autoNextSource = null;
+                autoNextIndex = -1;
+            }
+        }
+
+        setInterval(async function() {
+            try {
+                var r = await fetch('/status');
+                var j = await r.json();
+                var s = document.getElementById('status');
+                if (j.title) {
+                    document.getElementById('now-playing').textContent = j.title;
+                }
+                if (j.thumbnail) {
+                    var thumb = document.getElementById('thumbnail');
+                    thumb.src = j.thumbnail;
+                    thumb.classList.add('visible');
+                } else if (j.hasOwnProperty('thumbnail') && j.thumbnail === '') {
+                    document.getElementById('thumbnail').classList.remove('visible');
+                }
+                if (j.error) {
+                    s.textContent = j.error;
+                    s.classList.add('error');
+                } else if (j.state) {
+                    s.textContent = j.state;
+                    s.classList.remove('error');
+                }
+                if (j.paused !== undefined) {
+                    isPaused = j.paused;
+                }
+                refreshVolume();
+                // Detect Playing→Idle transition for auto-next
+                var nowPlaying = (j.state === 'Playing' || j.state === 'Paused');
+                var isLoading = (j.state === 'Resolving audio...');
+                if (wasPlaying && !nowPlaying && !isLoading && !j.error) {
+                    autoPlayNext();
+                }
+                // Don't update wasPlaying during loading — preserve the Playing state
+                if (!isLoading) {
+                    wasPlaying = nowPlaying;
+                }
+                // Track whether something is actively playing
+                isPlaying = nowPlaying;
+                vizActive = (j.state === 'Playing');
+                updatePlayPauseBtn();
+                // Sync progress bar
+                if (j.duration !== undefined) progressDuration = j.duration;
+                if (j.elapsed !== undefined) progressElapsed = j.elapsed;
+                progressPlaying = (j.state === 'Playing');
+                updateProgressUI();
+            } catch(e) {}
+        }, 5000);
+
+        // Poll BT status every 15s
+        setInterval(refreshBt, 15000);
+
+        // Equalizer Visualizer - Block style
+        var viz = document.getElementById('visualizer');
+        var numCols = 32;
+        var numBlocks = 11; // blocks per column
+        var columns = [];   // array of { blocks: [], level: 0, target: 0, velocity: 0 }
+        var vizActive = false;
+
+        // Block colors: green at bottom, orange in middle, red at top
+        var blockColors = [
+            '#2a8a2a', '#2a8a2a', '#2a8a2a', '#2a8a2a',  // bottom 4: green
+            '#8a8a2a', '#8a8a2a', '#8a8a2a',              // middle 3: orange/yellow
+            '#c26a2a', '#c26a2a',                          // upper 2: orange
+            '#c24848', '#e84848'                            // top 2: red
+        ];
+        var blockGlows = [
+            'rgba(42, 138, 42, 0.5)', 'rgba(42, 138, 42, 0.5)',
+            'rgba(42, 138, 42, 0.5)', 'rgba(42, 138, 42, 0.5)',
+            'rgba(138, 138, 42, 0.5)', 'rgba(138, 138, 42, 0.5)',
+            'rgba(138, 138, 42, 0.5)',
+            'rgba(194, 106, 42, 0.5)', 'rgba(194, 106, 42, 0.5)',
+            'rgba(194, 72, 72, 0.5)', 'rgba(232, 72, 72, 0.6)'
+        ];
+
+        for (var i = 0; i < numCols; i++) {
+            var col = document.createElement('div');
+            col.className = 'viz-column';
+            var blocks = [];
+            for (var j = 0; j < numBlocks; j++) {
+                var block = document.createElement('div');
+                block.className = 'viz-block';
+                col.appendChild(block);
+                blocks.push(block);
+            }
+            viz.appendChild(col);
+            columns.push({ blocks: blocks, level: 0, target: 0, velocity: 0 });
+        }
+
+        function newTargets() {
+            if (!vizActive) {
+                for (var i = 0; i < numCols; i++) {
+                    columns[i].target = 0;
+                }
+                return;
+            }
+            var bass = Math.random() * 0.6 + 0.4;
+            var mid = Math.random() * 0.5 + 0.3;
+            var treble = Math.random() * 0.4 + 0.1;
+
+            for (var i = 0; i < numCols; i++) {
+                var pos = i / numCols;
+                var energy;
+                if (pos < 0.25) {
+                    energy = bass * (0.7 + Math.random() * 0.3);
+                } else if (pos < 0.55) {
+                    energy = mid * (0.5 + Math.random() * 0.5);
+                } else {
+                    energy = treble * (0.3 + Math.random() * 0.7);
+                }
+                energy *= (0.6 + Math.random() * 0.4);
+                if (Math.random() < 0.08) energy = Math.min(energy * 1.8, 1.0);
+                columns[i].target = energy * numBlocks;
+            }
+        }
+
+        function animateEqualizer() {
+            for (var i = 0; i < numCols; i++) {
+                var c = columns[i];
+                var diff = c.target - c.level;
+                if (diff > 0) {
+                    c.level += diff * 0.5;
+                } else {
+                    c.level += diff * 0.15;
+                }
+                if (c.level < 0) c.level = 0;
+                if (c.level > numBlocks) c.level = numBlocks;
+
+                var lit = Math.round(c.level);
+                for (var j = 0; j < numBlocks; j++) {
+                    if (j < lit) {
+                        c.blocks[j].style.background = blockColors[j];
+                        c.blocks[j].style.boxShadow = '0 0 4px ' + blockGlows[j];
+                    } else {
+                        c.blocks[j].style.background = '#111';
+                        c.blocks[j].style.boxShadow = 'none';
+                    }
+                }
+            }
+        }
+
+        setInterval(newTargets, 120);
+        setInterval(animateEqualizer, 25);
+
+        // OAuth auth flow
+        async function checkAuth() {
+            try {
+                var r = await fetch('/auth/status');
+                var j = await r.json();
+                if (!j.authenticated) {
+                    // Show back button so user can switch to a different service
+                    document.getElementById('auth-back-btn').style.display = '';
+                    document.getElementById('auth-overlay').classList.add('active');
+                }
+            } catch(e) {}
+        }
+
+        async function startAuth() {
+            var btn = document.getElementById('auth-btn');
+            btn.disabled = true;
+            btn.textContent = 'Starting...';
+            try {
+                var r = await fetch('/auth/start', { method: 'POST' });
+                var j = await r.json();
+                if (j.error) {
+                    document.getElementById('auth-msg').textContent = 'Error: ' + j.error;
+                    btn.disabled = false;
+                    btn.textContent = 'Try Again';
+                    return;
+                }
+                document.getElementById('auth-code').textContent = j.user_code;
+                document.getElementById('auth-url').textContent = j.url;
+                document.getElementById('auth-url').href = j.url;
+                document.getElementById('auth-qr').src = '/auth/qr?url=' + encodeURIComponent(j.url);
+                document.getElementById('auth-code-display').style.display = 'block';
+                btn.style.display = 'none';
+                document.getElementById('auth-msg').textContent = 'Waiting for sign-in...';
+                pollAuth();
+            } catch(e) {
+                document.getElementById('auth-msg').textContent = 'Connection error. Try again.';
+                btn.disabled = false;
+                btn.textContent = 'Try Again';
+            }
+        }
+
+        var authPollTimer = null;
+        function pollAuth() {
+            authPollTimer = setInterval(async function() {
+                try {
+                    var r = await fetch('/auth/complete', { method: 'POST' });
+                    var j = await r.json();
+                    if (j.success) {
+                        clearInterval(authPollTimer);
+                        document.getElementById('auth-overlay').classList.remove('active');
+                        loadTab('history');
+                        loadTab('liked');
+                        loadPlaylists();
+                        // Show last track info but don't auto-play
+                        var lastId = localStorage.getItem('lastPlayingId');
+                        var lastTitle = localStorage.getItem('lastPlayingTitle');
+                        if (lastId && lastTitle) {
+                            document.getElementById('now-playing').textContent = lastTitle;
+                        }
+                    }
+                    // If still pending, just keep polling silently
+                } catch(e) {}
+            }, 5000);
+        }
+
+        // Service selection
+        var activeServiceName = 'Music';
+        async function loadServices() {
+            try {
+                var r = await fetch('/service');
+                var j = await r.json();
+                var sel = document.getElementById('service-select');
+                sel.innerHTML = '';
+                j.services.forEach(function(s) {
+                    var opt = document.createElement('option');
+                    opt.value = s.name;
+                    opt.textContent = s.display_name;
+                    if (s.name === j.active) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+                var active = j.services.find(function(s) { return s.name === j.active; });
+                if (active) {
+                    activeServiceName = active.display_name;
+                    updateServiceLabels();
+                }
+            } catch(e) {}
+        }
+        function updateServiceLabels() {
+            document.getElementById('url').placeholder = 'Paste ' + activeServiceName + ' URL...';
+            document.getElementById('search-query').placeholder = 'Search ' + activeServiceName + '...';
+            document.getElementById('auth-msg').textContent = 'Connect your ' + activeServiceName + ' account to get started.';
+        }
+        var previousService = null;
+        async function switchService(name) {
+            try {
+                // Remember previous service so we can go back if auth fails
+                var r0 = await fetch('/service');
+                var j0 = await r0.json();
+                previousService = j0.active;
+
+                await fetch('/service', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({service: name})
+                });
+                await loadServices();
+                // Reset tabs and re-check auth
+                tabLoaded = { history: false, liked: false, playlists: false };
+                tabData = { history: [], liked: [], playlists: [], search: [] };
+
+                // Check if new service is authenticated
+                var r = await fetch('/auth/status');
+                var j = await r.json();
+                if (!j.authenticated) {
+                    // Show auth overlay with back button
+                    document.getElementById('auth-back-btn').style.display = '';
+                    document.getElementById('auth-overlay').classList.add('active');
+                } else {
+                    previousService = null;
+                    document.getElementById('auth-overlay').classList.remove('active');
+                    initAfterAuth();
+                }
+            } catch(e) {}
+        }
+        function authGoBack() {
+            // Reset auth overlay state
+            document.getElementById('auth-overlay').classList.remove('active');
+            document.getElementById('auth-code-display').style.display = 'none';
+            document.getElementById('auth-btn').style.display = '';
+            document.getElementById('auth-btn').disabled = false;
+            document.getElementById('auth-btn').textContent = 'Sign In';
+            document.getElementById('auth-back-btn').style.display = 'none';
+            if (authPollTimer) clearInterval(authPollTimer);
+            // Switch back to previous service, or default to youtube
+            var target = previousService || 'youtube';
+            previousService = null;
+            fetch('/service', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({service: target})
+            }).then(function() {
+                loadServices();
+                initAfterAuth();
+            });
+        }
+        loadServices();
+
+        // Initialize auto-next checkbox
+        document.getElementById('auto-next-cb').checked = autoNextEnabled;
+
+        checkAuth();
+    </script>
+</body>
+</html>

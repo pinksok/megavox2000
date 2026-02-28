@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnavox 2000 - Wi-Fi Setup</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Courier New', 'Courier', monospace;
+            background: #000;
+            color: #6a9955;
+            min-height: 100vh;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-container {
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+            background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+            border: 3px ridge #4a6a4a;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(106, 153, 85, 0.2), inset 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #4a6a4a;
+            padding-bottom: 12px;
+        }
+        h1 {
+            font-family: 'Michroma', 'Eurostile', 'Arial Narrow', sans-serif;
+            font-size: 1.3rem;
+            color: #6a9955;
+            text-shadow: 0 0 8px rgba(106, 153, 85, 0.5);
+            letter-spacing: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .subtitle {
+            font-size: 0.75rem;
+            color: #5a8a5a;
+            margin-top: 4px;
+            letter-spacing: 2px;
+        }
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        /* Welcome screen */
+        .wifi-icon {
+            text-align: center;
+            font-size: 3rem;
+            margin: 20px 0;
+            color: #6a9955;
+            text-shadow: 0 0 12px rgba(106, 153, 85, 0.4);
+        }
+        .welcome-text {
+            text-align: center;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* Buttons */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 2px outset #5a7a5a;
+            background: linear-gradient(145deg, #5a8a5a, #4a7a4a);
+            color: #000;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .btn:hover { background: linear-gradient(145deg, #6a9a6a, #5a8a5a); }
+        .btn:active { border-style: inset; }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #4a6a4a;
+            color: #6a9955;
+            font-size: 0.75rem;
+            padding: 8px;
+            margin-top: 10px;
+        }
+        .btn-secondary:hover { border-color: #6a9955; }
+
+        /* Network list */
+        .network-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #3a5a3a;
+            border-radius: 6px;
+        }
+        .network-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #2a3a2a;
+            transition: background 0.15s;
+        }
+        .network-item:last-child { border-bottom: none; }
+        .network-item:hover { background: rgba(106, 153, 85, 0.1); }
+        .network-item.selected { background: rgba(106, 153, 85, 0.2); border-left: 3px solid #6a9955; }
+        .network-ssid {
+            flex: 1;
+            font-size: 0.85rem;
+            color: #7ac5cd;
+        }
+        .network-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .network-lock {
+            font-size: 0.7rem;
+            color: #888;
+        }
+
+        /* Signal bars */
+        .signal-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 16px;
+        }
+        .signal-bar {
+            width: 4px;
+            background: #3a5a3a;
+            border-radius: 1px;
+        }
+        .signal-bar.active { background: #6a9955; }
+        .signal-bar:nth-child(1) { height: 4px; }
+        .signal-bar:nth-child(2) { height: 8px; }
+        .signal-bar:nth-child(3) { height: 12px; }
+        .signal-bar:nth-child(4) { height: 16px; }
+
+        /* Password input */
+        .password-section {
+            display: none;
+            margin-bottom: 15px;
+        }
+        .password-section.visible { display: block; }
+        .password-label {
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+            color: #5a8a5a;
+        }
+        .password-wrap {
+            position: relative;
+            display: flex;
+        }
+        .password-wrap input {
+            flex: 1;
+            padding: 10px;
+            padding-right: 60px;
+            border: 2px solid #4a6a4a;
+            background: #000;
+            color: #6a9955;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            outline: none;
+        }
+        .password-wrap input:focus { border-color: #6a9955; }
+        .toggle-pw {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: 1px solid #4a6a4a;
+            color: #6a9955;
+            font-family: 'Courier New', monospace;
+            font-size: 0.65rem;
+            padding: 3px 6px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        /* Connecting spinner */
+        .spinner-wrap {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #3a5a3a;
+            border-top-color: #6a9955;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px auto;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .connecting-text {
+            font-size: 0.85rem;
+            color: #5a8a5a;
+        }
+
+        /* Result */
+        .result-icon {
+            text-align: center;
+            font-size: 2.5rem;
+            margin: 15px 0;
+        }
+        .result-title {
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .result-detail {
+            font-size: 0.8rem;
+            line-height: 1.6;
+            margin-bottom: 5px;
+        }
+        .result-detail .label { color: #5a8a5a; }
+        .result-detail .value { color: #7ac5cd; }
+        .result-url {
+            text-align: center;
+            margin: 20px 0;
+            padding: 12px;
+            background: rgba(106, 153, 85, 0.1);
+            border: 1px solid #4a6a4a;
+            border-radius: 6px;
+        }
+        .result-url a {
+            color: #7ac5cd;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        .result-url a:hover { text-decoration: underline; }
+        .result-note {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #5a8a5a;
+            margin-top: 10px;
+        }
+        .error-msg {
+            color: #c24848;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        /* Scanning animation */
+        .scanning-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+        }
+
+        /* Scrollbar */
+        .network-list::-webkit-scrollbar { width: 6px; }
+        .network-list::-webkit-scrollbar-track { background: #0a0a0a; }
+        .network-list::-webkit-scrollbar-thumb { background: #4a6a4a; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="header">
+            <h1>MAGNAVOX 2000</h1>
+            <div class="subtitle">Wi-Fi Setup</div>
+        </div>
+
+        <!-- Screen 1: Welcome -->
+        <div id="screen-welcome" class="screen active">
+            <div class="wifi-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6a9955" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(106,153,85,0.4))">
+                    <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                    <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                    <circle cx="12" cy="20" r="1" fill="#6a9955"/>
+                </svg>
+            </div>
+            <div class="welcome-text">
+                Welcome! Let's connect your<br>Magnavox 2000 to Wi-Fi.
+            </div>
+            <button class="btn" onclick="startScan()">SCAN FOR NETWORKS</button>
+        </div>
+
+        <!-- Screen 2: Network Selection -->
+        <div id="screen-networks" class="screen">
+            <div id="network-list" class="network-list">
+                <!-- Populated by JS -->
+            </div>
+            <div id="password-section" class="password-section">
+                <div class="password-label">Password for <span id="selected-ssid-label" style="color:#7ac5cd"></span></div>
+                <div class="password-wrap">
+                    <input type="password" id="wifi-password" placeholder="Enter password" autocomplete="off" onkeydown="if(event.key==='Enter')doConnect()">
+                    <button class="toggle-pw" onclick="togglePassword()">SHOW</button>
+                </div>
+            </div>
+            <button class="btn" id="connect-btn" onclick="doConnect()" disabled>CONNECT</button>
+            <button class="btn btn-secondary" onclick="startScan()">RESCAN</button>
+        </div>
+
+        <!-- Screen 3: Connecting -->
+        <div id="screen-connecting" class="screen">
+            <div class="spinner-wrap">
+                <div class="spinner"></div>
+                <div class="connecting-text">Connecting to <span id="connecting-ssid" style="color:#7ac5cd"></span><span class="scanning-dots"></span></div>
+            </div>
+        </div>
+
+        <!-- Screen 4: Result -->
+        <div id="screen-result" class="screen">
+            <div id="result-success" style="display:none">
+                <div class="result-icon" style="color:#6a9955">&#10003;</div>
+                <div class="result-title" style="color:#6a9955">Connected!</div>
+                <div class="result-detail">
+                    <span class="label">Network:</span> <span class="value" id="result-ssid"></span>
+                </div>
+                <div class="result-detail">
+                    <span class="label">IP Address:</span> <span class="value" id="result-ip"></span>
+                </div>
+                <div class="result-url">
+                    <a id="result-link" href="http://boombox.local">http://boombox.local</a>
+                </div>
+                <div class="result-note">
+                    Bookmark the link above to access your<br>Magnavox 2000 from any device on this network.
+                </div>
+            </div>
+            <div id="result-fail" style="display:none">
+                <div class="result-icon" style="color:#c24848">&#10007;</div>
+                <div class="result-title" style="color:#c24848">Connection Failed</div>
+                <div class="error-msg" id="result-error"></div>
+                <button class="btn" onclick="showScreen('screen-networks')">TRY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedSSID = '';
+        let selectedSecurity = '';
+        let pollTimer = null;
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function startScan() {
+            showScreen('screen-welcome');
+            const btn = document.querySelector('#screen-welcome .btn');
+            btn.textContent = 'SCANNING...';
+            btn.disabled = true;
+
+            fetch('/setup/scan')
+                .then(r => r.json())
+                .then(data => {
+                    btn.textContent = 'SCAN FOR NETWORKS';
+                    btn.disabled = false;
+                    if (data.networks && data.networks.length > 0) {
+                        renderNetworks(data.networks);
+                        showScreen('screen-networks');
+                    } else {
+                        btn.textContent = 'NO NETWORKS FOUND - TAP TO RETRY';
+                    }
+                })
+                .catch(() => {
+                    btn.textContent = 'SCAN FAILED - TAP TO RETRY';
+                    btn.disabled = false;
+                });
+        }
+
+        function renderNetworks(networks) {
+            const list = document.getElementById('network-list');
+            list.innerHTML = '';
+            selectedSSID = '';
+            selectedSecurity = '';
+            document.getElementById('password-section').classList.remove('visible');
+            document.getElementById('connect-btn').disabled = true;
+
+            networks.forEach(net => {
+                const item = document.createElement('div');
+                item.className = 'network-item';
+                item.onclick = () => selectNetwork(net.ssid, net.security, item);
+
+                const bars = getSignalBars(net.signal);
+                const locked = net.security !== 'Open' && net.security !== '';
+
+                item.innerHTML = `
+                    <div class="network-ssid">${escapeHtml(net.ssid)}</div>
+                    <div class="network-meta">
+                        ${locked ? '<span class="network-lock">&#128274;</span>' : ''}
+                        <div class="signal-bars">
+                            <div class="signal-bar ${bars >= 1 ? 'active' : ''}"></div>
+                            <div class="signal-bar ${bars >= 2 ? 'active' : ''}"></div>
+                            <div class="signal-bar ${bars >= 3 ? 'active' : ''}"></div>
+                            <div class="signal-bar ${bars >= 4 ? 'active' : ''}"></div>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function getSignalBars(signal) {
+            if (signal >= 75) return 4;
+            if (signal >= 50) return 3;
+            if (signal >= 25) return 2;
+            return 1;
+        }
+
+        function selectNetwork(ssid, security, el) {
+            selectedSSID = ssid;
+            selectedSecurity = security;
+
+            document.querySelectorAll('.network-item').forEach(i => i.classList.remove('selected'));
+            el.classList.add('selected');
+
+            const pwSection = document.getElementById('password-section');
+            const isOpen = !security || security === 'Open';
+
+            if (isOpen) {
+                pwSection.classList.remove('visible');
+            } else {
+                pwSection.classList.add('visible');
+                document.getElementById('selected-ssid-label').textContent = ssid;
+                document.getElementById('wifi-password').value = '';
+                document.getElementById('wifi-password').focus();
+            }
+
+            document.getElementById('connect-btn').disabled = false;
+        }
+
+        function togglePassword() {
+            const pw = document.getElementById('wifi-password');
+            const btn = document.querySelector('.toggle-pw');
+            if (pw.type === 'password') {
+                pw.type = 'text';
+                btn.textContent = 'HIDE';
+            } else {
+                pw.type = 'password';
+                btn.textContent = 'SHOW';
+            }
+        }
+
+        function doConnect() {
+            if (!selectedSSID) return;
+
+            const password = document.getElementById('wifi-password').value;
+            const isSecured = selectedSecurity && selectedSecurity !== 'Open';
+
+            if (isSecured && !password) {
+                document.getElementById('wifi-password').focus();
+                return;
+            }
+
+            document.getElementById('connecting-ssid').textContent = selectedSSID;
+            showScreen('screen-connecting');
+
+            fetch('/setup/connect', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ssid: selectedSSID, password: password})
+            })
+            .then(r => r.json())
+            .then(() => {
+                // Poll for result
+                pollTimer = setInterval(pollResult, 2000);
+            })
+            .catch(() => {
+                showResult(false, '', '', 'Request failed');
+            });
+        }
+
+        function pollResult() {
+            fetch('/setup/result')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'connected') {
+                        clearInterval(pollTimer);
+                        showResult(true, data.ssid, data.ip, '');
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollTimer);
+                        showResult(false, data.ssid, '', data.error);
+                    }
+                    // else still connecting, keep polling
+                })
+                .catch(() => {
+                    // Connection dropped - Pi likely switched networks
+                    clearInterval(pollTimer);
+                    showResult(true, selectedSSID, '', '');
+                });
+        }
+
+        function showResult(success, ssid, ip, error) {
+            showScreen('screen-result');
+            if (success) {
+                document.getElementById('result-success').style.display = 'block';
+                document.getElementById('result-fail').style.display = 'none';
+                document.getElementById('result-ssid').textContent = ssid;
+                document.getElementById('result-ip').textContent = ip || '(assigned)';
+            } else {
+                document.getElementById('result-success').style.display = 'none';
+                document.getElementById('result-fail').style.display = 'block';
+                document.getElementById('result-error').textContent = error || 'Could not connect. Check your password and try again.';
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
