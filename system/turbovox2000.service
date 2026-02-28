@@ -1,5 +1,5 @@
 [Unit]
-Description=Magnavox 2000 Music Player
+Description=TurboVox 2000 Music Player
 After=pipewire-pulse.service
 
 [Service]

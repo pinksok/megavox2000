@@ -1,14 +1,15 @@
 #!/bin/bash
 set -e
 
-# Magnavox 2000 - Installation Script
+# TurboVox 2000 - Installation Script
 # Run on a fresh Raspberry Pi OS Lite (Bookworm or later)
 # Usage: sudo bash install.sh
 
 echo ""
-echo "  ╔══════════════════════════════════╗"
-echo "  ║       Magnavox 2000 Installer    ║"
-echo "  ╚══════════════════════════════════╝"
+echo "  ╔══════════════════════════════════════════════════╗"
+echo "  ║              TurboVox 2000 Installer             ║"
+echo "  ║   MEGA BASS DIGITAL XBS PROCESSING SYSTEM        ║"
+echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
 
 # --- Validate environment ---
@@ -21,7 +22,7 @@ fi
 REAL_USER="${SUDO_USER:-pi}"
 REAL_HOME=$(eval echo "~$REAL_USER")
 REAL_UID=$(id -u "$REAL_USER")
-INSTALL_DIR="$REAL_HOME/magnavox2000"
+INSTALL_DIR="$REAL_HOME/turbovox2000"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "  User:      $REAL_USER (UID $REAL_UID)"
@@ -96,7 +97,7 @@ else
 fi
 echo "  Done."
 
-# --- Step 6: Install user service (magnavox2000.service) ---
+# --- Step 6: Install user service (turbovox2000.service) ---
 echo "[6/8] Installing user service..."
 USER_SERVICE_DIR="$REAL_HOME/.config/systemd/user"
 mkdir -p "$USER_SERVICE_DIR"
@@ -104,7 +105,7 @@ mkdir -p "$USER_SERVICE_DIR"
 # Generate service file with correct paths and UID
 sed -e "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" \
     -e "s|INSTALL_UID_PLACEHOLDER|$REAL_UID|g" \
-    "$SCRIPT_DIR/system/magnavox2000.service" > "$USER_SERVICE_DIR/magnavox2000.service"
+    "$SCRIPT_DIR/system/turbovox2000.service" > "$USER_SERVICE_DIR/turbovox2000.service"
 
 chown -R "$REAL_USER:$REAL_USER" "$REAL_HOME/.config"
 
@@ -115,43 +116,43 @@ loginctl enable-linger "$REAL_USER"
 sudo -u "$REAL_USER" XDG_RUNTIME_DIR="/run/user/$REAL_UID" \
     systemctl --user daemon-reload
 sudo -u "$REAL_USER" XDG_RUNTIME_DIR="/run/user/$REAL_UID" \
-    systemctl --user enable magnavox2000.service
+    systemctl --user enable turbovox2000.service
 echo "  Done."
 
-# --- Step 7: Install boot service (magnavox-setup.service) ---
+# --- Step 7: Install boot service (turbovox-setup.service) ---
 echo "[7/8] Installing boot service..."
 
 # Copy boot script and set the user
-cp "$SCRIPT_DIR/system/magnavox-boot.sh" "$INSTALL_DIR/magnavox-boot.sh"
-chmod +x "$INSTALL_DIR/magnavox-boot.sh"
-sed -i "s|^APP_USER=.*|APP_USER=\"$REAL_USER\"|" "$INSTALL_DIR/magnavox-boot.sh"
+cp "$SCRIPT_DIR/system/turbovox-boot.sh" "$INSTALL_DIR/turbovox-boot.sh"
+chmod +x "$INSTALL_DIR/turbovox-boot.sh"
+sed -i "s|^APP_USER=.*|APP_USER=\"$REAL_USER\"|" "$INSTALL_DIR/turbovox-boot.sh"
 
 # Generate system service with correct paths
 sed -e "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" \
-    "$SCRIPT_DIR/system/magnavox-setup.service" > /etc/systemd/system/magnavox-setup.service
+    "$SCRIPT_DIR/system/turbovox-setup.service" > /etc/systemd/system/turbovox-setup.service
 
 # Captive portal DNS config for AP mode
 mkdir -p /etc/NetworkManager/dnsmasq-shared.d
 cp "$SCRIPT_DIR/system/captive-portal.conf" /etc/NetworkManager/dnsmasq-shared.d/
 
 systemctl daemon-reload
-systemctl enable magnavox-setup.service
+systemctl enable turbovox-setup.service
 echo "  Done."
 
 # --- Step 8: Configure permissions ---
 echo "[8/8] Configuring permissions..."
 # wifi_setup.py needs passwordless sudo for nmcli
-cat > /etc/sudoers.d/magnavox2000 << SUDOERS
+cat > /etc/sudoers.d/turbovox2000 << SUDOERS
 $REAL_USER ALL=(ALL) NOPASSWD: /usr/bin/nmcli
 SUDOERS
-chmod 440 /etc/sudoers.d/magnavox2000
+chmod 440 /etc/sudoers.d/turbovox2000
 echo "  Done."
 
 # --- Complete ---
 echo ""
-echo "  ╔══════════════════════════════════╗"
-echo "  ║     Installation complete!       ║"
-echo "  ╚══════════════════════════════════╝"
+echo "  ╔══════════════════════════════════════════════════╗"
+echo "  ║           Installation complete!                 ║"
+echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
 echo "  Next steps:"
 if [ ! -f "$INSTALL_DIR/app/oauth_config.json" ]; then
@@ -162,6 +163,6 @@ else
 fi
 echo ""
 echo "  After reboot:"
-echo "    - If no Wi-Fi saved: connect to 'Magnavox2000-Setup' (password: magnavox2000)"
+echo "    - If no Wi-Fi saved: connect to 'TurboVox2000-Setup' (password: turbovox2000)"
 echo "    - If Wi-Fi connected: go to http://boombox.local"
 echo ""

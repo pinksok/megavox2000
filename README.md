@@ -1,4 +1,6 @@
-# Magnavox 2000
+# TurboVox 2000
+
+**MEGA BASS DIGITAL XBS PROCESSING SYSTEM**
 
 A retro-styled music player for Raspberry Pi. Stream music through your home speakers with a web-based remote control you can use from any phone or computer.
 
@@ -18,15 +20,15 @@ Power on your Pi, connect it to your Wi-Fi through the setup screen, then contro
 
 ## Quick Start (Pre-Built Image)
 
-If you received an SD card with Magnavox 2000 pre-installed:
+If you received an SD card with TurboVox 2000 pre-installed:
 
 1. Insert the SD card and power on your Raspberry Pi
-2. On your phone, connect to Wi-Fi network **Magnavox2000-Setup** (password: `magnavox2000`)
+2. On your phone, connect to Wi-Fi network **TurboVox2000-Setup** (password: `turbovox2000`)
 3. A setup page will appear -- select your home Wi-Fi and enter the password
 4. Once connected, go to **http://boombox.local** from any device on your network
 5. Sign in with your Google account when prompted
 
-**Windows users:** If prompted for a WPS PIN instead of a password, go to Settings > Network > Wi-Fi > Manage known networks, forget "Magnavox2000-Setup", and reconnect using the password `magnavox2000`.
+**Windows users:** If prompted for a WPS PIN instead of a password, go to Settings > Network > Wi-Fi > Manage known networks, forget "TurboVox2000-Setup", and reconnect using the password `turbovox2000`.
 
 ## Install From Scratch
 
@@ -34,8 +36,8 @@ Requirements: Raspberry Pi 3B/3B+ (also works on Pi 4, Pi 5) running Raspberry P
 
 ```bash
 # Clone the repo
-git clone https://github.com/pinksok/magnavox2000.git
-cd magnavox2000
+git clone https://github.com/pinksok/turbovox2000.git
+cd turbovox2000
 
 # Run the installer
 sudo bash install.sh
@@ -62,13 +64,13 @@ To use YouTube Music, you need Google OAuth credentials:
 7. Create the config file on your Pi:
 
 ```bash
-cat > ~/magnavox2000/app/oauth_config.json << 'EOF'
+cat > ~/turbovox2000/app/oauth_config.json << 'EOF'
 {
     "client_id": "YOUR_CLIENT_ID_HERE",
     "client_secret": "YOUR_CLIENT_SECRET_HERE"
 }
 EOF
-chmod 600 ~/magnavox2000/app/oauth_config.json
+chmod 600 ~/turbovox2000/app/oauth_config.json
 ```
 
 8. Reboot: `sudo reboot`
@@ -86,8 +88,8 @@ chmod 600 ~/magnavox2000/app/oauth_config.json
 
 | Problem | Solution |
 |---------|----------|
-| Can't find Magnavox2000-Setup Wi-Fi | Wait 30 seconds after power-on for the hotspot to start |
-| Windows asks for WPS PIN | Forget the network, reconnect with password `magnavox2000` |
+| Can't find TurboVox2000-Setup Wi-Fi | Wait 30 seconds after power-on for the hotspot to start |
+| Windows asks for WPS PIN | Forget the network, reconnect with password `turbovox2000` |
 | No sound | Check volume in web UI; verify audio output with `aplay -l` |
 | "OAuth not configured" | Create `oauth_config.json` -- see setup instructions above |
 | Page won't load | Try `http://boombox.local:5000` or find the Pi's IP with `ping boombox.local` |
@@ -110,13 +112,13 @@ The app uses a service provider pattern -- YouTube is the first implemented serv
 
 ```bash
 # Restart the player
-systemctl --user restart magnavox2000
+systemctl --user restart turbovox2000
 
 # View logs
-journalctl --user -u magnavox2000 -f
+journalctl --user -u turbovox2000 -f
 
 # Re-run Wi-Fi setup (force AP mode)
-sudo systemctl restart magnavox-setup
+sudo systemctl restart turbovox-setup
 
 # Update yt-dlp
 sudo pip3 install --break-system-packages --upgrade yt-dlp

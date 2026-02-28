@@ -1,10 +1,10 @@
 #!/bin/bash
-# Magnavox 2000 - Boot-time Wi-Fi check and port redirect
-# Runs as root via magnavox-setup.service
+# TurboVox 2000 - Boot-time Wi-Fi check and port redirect
+# Runs as root via turbovox-setup.service
 
-MODE_FILE="/tmp/magnavox-mode"
-HOTSPOT_CON="Magnavox2000-Setup"
-HOTSPOT_SSID="Magnavox2000-Setup"
+MODE_FILE="/tmp/turbovox-mode"
+HOTSPOT_CON="TurboVox2000-Setup"
+HOTSPOT_SSID="TurboVox2000-Setup"
 APP_USER="pi"
 
 case "$1" in
@@ -35,7 +35,7 @@ case "$1" in
             nmcli connection down "$HOTSPOT_CON" 2>/dev/null
             nmcli connection delete "$HOTSPOT_CON" 2>/dev/null
             # Start hotspot with explicit password and WPS disabled
-            nmcli device wifi hotspot ifname wlan0 con-name "$HOTSPOT_CON" ssid "$HOTSPOT_SSID" band bg password "magnavox2000" 2>&1
+            nmcli device wifi hotspot ifname wlan0 con-name "$HOTSPOT_CON" ssid "$HOTSPOT_SSID" band bg password "turbovox2000" 2>&1
             nmcli connection modify "$HOTSPOT_CON" 802-11-wireless-security.wps-method 0 2>/dev/null
             echo "ap" > "$MODE_FILE"
             echo "Setup hotspot started: $HOTSPOT_SSID"

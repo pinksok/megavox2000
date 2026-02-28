@@ -1,8 +1,8 @@
-# Magnavox 2000 - Development Guide
+# TurboVox 2000 - Development Guide
 
 ## Project Overview
 
-Headless music player for Raspberry Pi with web-based control interface. Branded as "Magnavox 2000" with a retro 90s terminal aesthetic. Supports multiple music services via a provider abstraction layer. Primary target: Raspberry Pi 3, distributed as pre-built SD card images.
+Headless music player for Raspberry Pi with web-based control interface. Branded as "TurboVox 2000 - Mega Bass Digital XBS Processing System" with a retro 90s terminal aesthetic. Supports multiple music services via a provider abstraction layer. Primary target: Raspberry Pi 3, distributed as pre-built SD card images.
 
 **Active services**: YouTube Music (fully implemented), Spotify (stub), Pandora (stub).
 **Auth**: Service-specific OAuth flows (Google device flow for YouTube).
@@ -11,7 +11,7 @@ Headless music player for Raspberry Pi with web-based control interface. Branded
 ## Repository Structure
 
 ```
-magnavox2000/
+turbovox2000/
 ├── app/                         # Application code
 │   ├── app.py                   # Flask server, routes, service registration
 │   ├── config.py                # Paths, constants (BASE_DIR-relative)
@@ -32,9 +32,9 @@ magnavox2000/
 │       ├── index.html           # Main web UI
 │       └── setup.html           # Wi-Fi setup captive portal
 ├── system/                      # Systemd and boot config (templates)
-│   ├── magnavox2000.service     # User service template
-│   ├── magnavox-setup.service   # System boot service template
-│   ├── magnavox-boot.sh         # Boot script template
+│   ├── turbovox2000.service     # User service template
+│   ├── turbovox-setup.service   # System boot service template
+│   ├── turbovox-boot.sh         # Boot script template
 │   └── captive-portal.conf      # DNS hijack for AP mode
 ├── install.sh                   # Full setup script
 ├── build-image.md               # SD card image build instructions
@@ -101,9 +101,9 @@ parse_track_id(url) -> str | None
 
 - **Hostname**: `boombox` (set by install.sh)
 - **Port redirect**: iptables 80 -> 5000 (set by boot service)
-- **AP mode**: "Magnavox2000-Setup" hotspot, password: magnavox2000, WPS disabled
+- **AP mode**: "TurboVox2000-Setup" hotspot, password: turbovox2000, WPS disabled
 - **Captive portal**: DNS hijack via dnsmasq config, only active in AP mode
-- **Mode file**: `/tmp/magnavox-mode` ("ap" or "client")
+- **Mode file**: `/tmp/turbovox-mode` ("ap" or "client")
 
 ## Important Notes
 
@@ -126,16 +126,16 @@ yt-dlp qrcode ytmusicapi
 ## Service Management
 
 ```bash
-systemctl --user restart magnavox2000
-systemctl --user status magnavox2000
-journalctl --user -u magnavox2000 -f
-sudo systemctl restart magnavox-setup   # Re-run Wi-Fi check
+systemctl --user restart turbovox2000
+systemctl --user status turbovox2000
+journalctl --user -u turbovox2000 -f
+sudo systemctl restart turbovox-setup   # Re-run Wi-Fi check
 ```
 
 ## Git Workflow
 
 ```bash
-cd /home/beau/magnavox2000
+cd /home/beau/turbovox2000
 git add -A
 git commit -m "description
 
@@ -144,4 +144,4 @@ git push origin main
 ```
 
 **Git user**: pinksok (pinksok@users.noreply.github.com)
-**Remote**: git@github.com:pinksok/magnavox2000.git (SSH)
+**Remote**: git@github.com:pinksok/turbovox2000.git (SSH)

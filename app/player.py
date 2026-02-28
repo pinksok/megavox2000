@@ -490,7 +490,7 @@ def update_mpris_state():
     try:
         import dbus
         bus = dbus.SessionBus()
-        obj = bus.get_object("org.mpris.MediaPlayer2.magnavox2000",
+        obj = bus.get_object("org.mpris.MediaPlayer2.turbovox2000",
                              "/org/mpris/MediaPlayer2")
         props_iface = dbus.Interface(obj, "org.freedesktop.DBus.Properties")
         new_status = "Paused" if state.paused else "Playing"

@@ -1,4 +1,4 @@
-"""Wi-Fi setup Blueprint for Magnavox 2000.
+"""Wi-Fi setup Blueprint for TurboVox 2000.
 
 Handles AP mode detection, network scanning, and Wi-Fi connection
 for first-time setup / captive portal onboarding.
@@ -11,9 +11,9 @@ from flask import Blueprint, jsonify, request, render_template
 
 setup_bp = Blueprint("setup", __name__)
 
-SETUP_MODE_FILE = "/tmp/magnavox-mode"
-HOTSPOT_CON_NAME = "Magnavox2000-Setup"
-HOTSPOT_SSID = "Magnavox2000-Setup"
+SETUP_MODE_FILE = "/tmp/turbovox-mode"
+HOTSPOT_CON_NAME = "TurboVox2000-Setup"
+HOTSPOT_SSID = "TurboVox2000-Setup"
 
 # Connection state (shared across threads)
 _connection_state = {"status": "idle", "error": "", "ssid": "", "ip": ""}
