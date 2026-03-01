@@ -36,8 +36,8 @@ Requirements: Raspberry Pi 3B/3B+ (also works on Pi 4, Pi 5) running Raspberry P
 
 ```bash
 # Clone the repo
-git clone https://github.com/pinksok/turbovox2000.git
-cd turbovox2000
+git clone https://github.com/pinksok/megavox2000.git
+cd megavox2000
 
 # Run the installer
 sudo bash install.sh
@@ -46,7 +46,7 @@ sudo bash install.sh
 The installer will:
 - Install all system and Python dependencies
 - Set up the application and systemd services
-- Set the hostname to `mega2000`
+- Set the hostname to `mega`
 - Configure Wi-Fi onboarding hotspot
 
 After installation, add your OAuth credentials (see below) and reboot.

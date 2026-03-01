@@ -31,8 +31,8 @@ ssh pi@raspberrypi.local
 
 ```bash
 sudo apt install -y git
-git clone https://github.com/pinksok/turbovox2000.git /tmp/turbovox2000
-cd /tmp/turbovox2000
+git clone https://github.com/pinksok/megavox2000.git /tmp/megavox2000
+cd /tmp/megavox2000
 sudo bash install.sh
 ```
 
@@ -82,7 +82,7 @@ sudo journalctl --rotate && sudo journalctl --vacuum-time=1s
 sudo rm -f /etc/ssh/ssh_host_*
 
 # Remove install source
-sudo rm -rf /tmp/turbovox2000
+sudo rm -rf /tmp/megavox2000
 
 # Optional: zero free space for smaller compressed image
 sudo dd if=/dev/zero of=/tmp/zero bs=1M 2>/dev/null; sudo rm /tmp/zero

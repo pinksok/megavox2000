@@ -144,4 +144,4 @@ git push origin main
 ```
 
 **Git user**: pinksok (pinksok@users.noreply.github.com)
-**Remote**: git@github.com:pinksok/turbovox2000.git (SSH)
+**Remote**: git@github.com:pinksok/megavox2000.git (SSH)
