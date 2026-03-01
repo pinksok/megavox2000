@@ -1,8 +1,8 @@
-# TurboVox 2000 - Development Guide
+# MegaVox 2000 - Development Guide
 
 ## Project Overview
 
-Headless music player for Raspberry Pi with web-based control interface. Branded as "TurboVox 2000 - Mega Bass Digital XBS Processing System" with a retro 90s terminal aesthetic. Supports multiple music services via a provider abstraction layer. Primary target: Raspberry Pi 3, distributed as pre-built SD card images.
+Headless music player for Raspberry Pi with web-based control interface. Branded as "MegaVox 2000 - Mega Bass Digital XBS Processing System" with a retro 90s terminal aesthetic. Supports multiple music services via a provider abstraction layer. Primary target: Raspberry Pi 3, distributed as pre-built SD card images.
 
 **Active services**: YouTube Music (fully implemented), Spotify (stub), Pandora (stub).
 **Auth**: Service-specific OAuth flows (Google device flow for YouTube).
@@ -99,11 +99,11 @@ parse_track_id(url) -> str | None
 
 ## Network & Hostname
 
-- **Hostname**: `boombox` (set by install.sh)
+- **Hostname**: `mega` (set by install.sh)
 - **Port redirect**: iptables 80 -> 5000 (set by boot service)
-- **AP mode**: "TurboVox2000-Setup" hotspot, password: turbovox2000, WPS disabled
+- **AP mode**: "MegaVox2000-Setup" hotspot, password: mega2000, WPS disabled
 - **Captive portal**: DNS hijack via dnsmasq config, only active in AP mode
-- **Mode file**: `/tmp/turbovox-mode` ("ap" or "client")
+- **Mode file**: `/tmp/megavox-mode` ("ap" or "client")
 
 ## Important Notes
 

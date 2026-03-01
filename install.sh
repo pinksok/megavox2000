@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-# TurboVox 2000 - Installation Script
+# MegaVox 2000 - Installation Script
 # Run on a fresh Raspberry Pi OS Lite (Bookworm or later)
 # Usage: sudo bash install.sh
 
 echo ""
 echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║              TurboVox 2000 Installer             ║"
+echo "  ║              MegaVox 2000 Installer              ║"
 echo "  ║   MEGA BASS DIGITAL XBS PROCESSING SYSTEM        ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo ""
@@ -88,12 +88,12 @@ else
 fi
 
 # --- Step 5: Set hostname ---
-echo "[5/8] Setting hostname to 'boombox'..."
-hostnamectl set-hostname boombox
+echo "[5/8] Setting hostname to 'mega'..."
+hostnamectl set-hostname mega
 if grep -q "127.0.1.1" /etc/hosts; then
-    sed -i 's/127\.0\.1\.1.*/127.0.1.1\tboombox/' /etc/hosts
+    sed -i 's/127\.0\.1\.1.*/127.0.1.1\tmega/' /etc/hosts
 else
-    echo "127.0.1.1	boombox" >> /etc/hosts
+    echo "127.0.1.1	mega" >> /etc/hosts
 fi
 echo "  Done."
 
@@ -163,6 +163,6 @@ else
 fi
 echo ""
 echo "  After reboot:"
-echo "    - If no Wi-Fi saved: connect to 'TurboVox2000-Setup' (password: turbovox2000)"
-echo "    - If Wi-Fi connected: go to http://boombox.local"
+echo "    - If no Wi-Fi saved: connect to 'MegaVox2000-Setup' (password: mega2000)"
+echo "    - If Wi-Fi connected: go to http://mega.local"
 echo ""

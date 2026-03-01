@@ -1,5 +1,5 @@
 [Unit]
-Description=TurboVox 2000 Wi-Fi Setup
+Description=MegaVox 2000 Wi-Fi Setup
 After=NetworkManager.service
 Wants=NetworkManager.service
 

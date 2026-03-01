@@ -1,10 +1,10 @@
 #!/bin/bash
-# TurboVox 2000 - Boot-time Wi-Fi check and port redirect
-# Runs as root via turbovox-setup.service
+# MegaVox 2000 - Boot-time Wi-Fi check and port redirect
+# Runs as root via megavox-setup.service
 
-MODE_FILE="/tmp/turbovox-mode"
-HOTSPOT_CON="TurboVox2000-Setup"
-HOTSPOT_SSID="TurboVox2000-Setup"
+MODE_FILE="/tmp/megavox-mode"
+HOTSPOT_CON="MegaVox2000-Setup"
+HOTSPOT_SSID="MegaVox2000-Setup"
 APP_USER="pi"
 
 case "$1" in
@@ -12,7 +12,7 @@ case "$1" in
         # Wait for NetworkManager to be fully ready
         sleep 3
 
-        # Always add port 80 -> 5000 redirect so http://boombox.local works
+        # Always add port 80 -> 5000 redirect so http://mega.local works
         iptables -t nat -C PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 5000 2>/dev/null || \
             iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 5000
         iptables -t nat -C OUTPUT -p tcp -o lo --dport 80 -j REDIRECT --to-port 5000 2>/dev/null || \
@@ -35,7 +35,7 @@ case "$1" in
             nmcli connection down "$HOTSPOT_CON" 2>/dev/null
             nmcli connection delete "$HOTSPOT_CON" 2>/dev/null
             # Start hotspot with explicit password and WPS disabled
-            nmcli device wifi hotspot ifname wlan0 con-name "$HOTSPOT_CON" ssid "$HOTSPOT_SSID" band bg password "turbovox2000" 2>&1
+            nmcli device wifi hotspot ifname wlan0 con-name "$HOTSPOT_CON" ssid "$HOTSPOT_SSID" band bg password "mega2000" 2>&1
             nmcli connection modify "$HOTSPOT_CON" 802-11-wireless-security.wps-method 0 2>/dev/null
             echo "ap" > "$MODE_FILE"
             echo "Setup hotspot started: $HOTSPOT_SSID"

@@ -1,4 +1,4 @@
-# Building a TurboVox 2000 SD Card Image
+# Building a MegaVox 2000 SD Card Image
 
 Instructions for creating a pre-built SD card image that end users can flash and boot.
 
@@ -27,7 +27,7 @@ Insert the SD card in the Pi 3, connect Ethernet, and boot. SSH in:
 ssh pi@raspberrypi.local
 ```
 
-## Step 3: Install TurboVox 2000
+## Step 3: Install MegaVox 2000
 
 ```bash
 sudo apt install -y git
@@ -55,10 +55,10 @@ sudo reboot
 ```
 
 After reboot:
-1. Verify the "TurboVox2000-Setup" hotspot appears
-2. Connect to it from a phone (password: turbovox2000)
+1. Verify the "MegaVox2000-Setup" hotspot appears
+2. Connect to it from a phone (password: mega2000)
 3. Complete Wi-Fi setup
-4. Go to http://boombox.local
+4. Go to http://mega.local
 5. Sign in with Google
 6. Play a song
 
@@ -72,7 +72,7 @@ rm -f ~/turbovox2000/app/service.json
 rm -f ~/turbovox2000/app/volume.json
 
 # Remove saved Wi-Fi connections (so hotspot starts on new network)
-sudo nmcli connection delete "$(nmcli -t -f NAME,TYPE connection show | grep wireless | grep -v TurboVox | cut -d: -f1)" 2>/dev/null
+sudo nmcli connection delete "$(nmcli -t -f NAME,TYPE connection show | grep wireless | grep -v MegaVox | cut -d: -f1)" 2>/dev/null
 
 # Clear logs and history
 history -c && history -w
@@ -100,28 +100,28 @@ Remove the SD card and plug it into your computer.
 # Linux: lsblk
 
 # Create the image (replace /dev/sdX with your device)
-sudo dd if=/dev/sdX of=turbovox2000-v1.0.img bs=4M status=progress
+sudo dd if=/dev/sdX of=megavox2000-v1.0.img bs=4M status=progress
 
 # Shrink the image (optional but recommended)
 # Download PiShrink: https://github.com/Drewsif/PiShrink
-sudo ./pishrink.sh turbovox2000-v1.0.img
+sudo ./pishrink.sh megavox2000-v1.0.img
 
 # Compress for distribution
-xz -9 turbovox2000-v1.0.img
+xz -9 megavox2000-v1.0.img
 ```
 
 ## Step 8: Distribute
 
-Upload `turbovox2000-v1.0.img.xz` to GitHub Releases:
+Upload `megavox2000-v1.0.img.xz` to GitHub Releases:
 
 ```bash
-gh release create v1.0 turbovox2000-v1.0.img.xz \
-    --title "TurboVox 2000 v1.0" \
+gh release create v1.0 megavox2000-v1.0.img.xz \
+    --title "MegaVox 2000 v1.0" \
     --notes "Pre-built SD card image for Raspberry Pi 3. Flash with Balena Etcher and boot."
 ```
 
 ## For Each New Device
 
-1. Flash `turbovox2000-v1.0.img.xz` to a new SD card (Balena Etcher handles .xz)
+1. Flash `megavox2000-v1.0.img.xz` to a new SD card (Balena Etcher handles .xz)
 2. Insert in Pi 3, power on
-3. Hand to recipient -- they connect to "TurboVox2000-Setup" Wi-Fi and follow the setup
+3. Hand to recipient -- they connect to "MegaVox2000-Setup" Wi-Fi and follow the setup

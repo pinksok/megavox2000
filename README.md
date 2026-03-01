@@ -1,4 +1,4 @@
-# TurboVox 2000
+# MegaVox 2000
 
 **MEGA BASS DIGITAL XBS PROCESSING SYSTEM**
 
@@ -20,15 +20,15 @@ Power on your Pi, connect it to your Wi-Fi through the setup screen, then contro
 
 ## Quick Start (Pre-Built Image)
 
-If you received an SD card with TurboVox 2000 pre-installed:
+If you received an SD card with MegaVox 2000 pre-installed:
 
 1. Insert the SD card and power on your Raspberry Pi
-2. On your phone, connect to Wi-Fi network **TurboVox2000-Setup** (password: `turbovox2000`)
+2. On your phone, connect to Wi-Fi network **MegaVox2000-Setup** (password: `mega2000`)
 3. A setup page will appear -- select your home Wi-Fi and enter the password
-4. Once connected, go to **http://boombox.local** from any device on your network
+4. Once connected, go to **http://mega.local** from any device on your network
 5. Sign in with your Google account when prompted
 
-**Windows users:** If prompted for a WPS PIN instead of a password, go to Settings > Network > Wi-Fi > Manage known networks, forget "TurboVox2000-Setup", and reconnect using the password `turbovox2000`.
+**Windows users:** If prompted for a WPS PIN instead of a password, go to Settings > Network > Wi-Fi > Manage known networks, forget "MegaVox2000-Setup", and reconnect using the password `mega2000`.
 
 ## Install From Scratch
 
@@ -46,7 +46,7 @@ sudo bash install.sh
 The installer will:
 - Install all system and Python dependencies
 - Set up the application and systemd services
-- Set the hostname to `boombox`
+- Set the hostname to `mega2000`
 - Configure Wi-Fi onboarding hotspot
 
 After installation, add your OAuth credentials (see below) and reboot.
@@ -88,17 +88,17 @@ chmod 600 ~/turbovox2000/app/oauth_config.json
 
 | Problem | Solution |
 |---------|----------|
-| Can't find TurboVox2000-Setup Wi-Fi | Wait 30 seconds after power-on for the hotspot to start |
-| Windows asks for WPS PIN | Forget the network, reconnect with password `turbovox2000` |
+| Can't find MegaVox2000-Setup Wi-Fi | Wait 30 seconds after power-on for the hotspot to start |
+| Windows asks for WPS PIN | Forget the network, reconnect with password `mega2000` |
 | No sound | Check volume in web UI; verify audio output with `aplay -l` |
 | "OAuth not configured" | Create `oauth_config.json` -- see setup instructions above |
-| Page won't load | Try `http://boombox.local:5000` or find the Pi's IP with `ping boombox.local` |
+| Page won't load | Try `http://mega.local:5000` or find the Pi's IP with `ping mega.local` |
 | Playback stutters | Check Wi-Fi signal strength; try a wired Ethernet connection |
 
 ## Architecture
 
 ```
-Phone/Laptop ──── Wi-Fi ────> Raspberry Pi (boombox.local)
+Phone/Laptop ──── Wi-Fi ────> Raspberry Pi (mega.local)
                                   │
                                   ├── Flask web server (:5000)
                                   ├── yt-dlp (audio URL resolution)

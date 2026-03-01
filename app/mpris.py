@@ -21,7 +21,7 @@ def mpris_thread_func():
 
     class YTMusicMPRIS(dbus.service.Object):
         def __init__(self, bus):
-            name = dbus.service.BusName("org.mpris.MediaPlayer2.turbovox2000", bus)
+            name = dbus.service.BusName("org.mpris.MediaPlayer2.megavox2000", bus)
             super().__init__(name, "/org/mpris/MediaPlayer2")
             self._playback_status = "Stopped"
 
@@ -86,11 +86,11 @@ def mpris_thread_func():
                 if prop == "Metadata":
                     return dbus.Dictionary({
                         "mpris:trackid": dbus.ObjectPath("/org/mpris/MediaPlayer2/Track/1"),
-                        "xesam:title": state.current_title or "TurboVox 2000",
+                        "xesam:title": state.current_title or "MegaVox 2000",
                     }, signature="sv")
             if interface == MPRIS_IFACE:
                 if prop == "Identity":
-                    return "TurboVox 2000 Player"
+                    return "MegaVox 2000 Player"
                 if prop == "CanQuit":
                     return False
                 if prop == "CanRaise":
@@ -117,12 +117,12 @@ def mpris_thread_func():
                     "CanControl": True,
                     "Metadata": dbus.Dictionary({
                         "mpris:trackid": dbus.ObjectPath("/org/mpris/MediaPlayer2/Track/1"),
-                        "xesam:title": state.current_title or "TurboVox 2000",
+                        "xesam:title": state.current_title or "MegaVox 2000",
                     }, signature="sv"),
                 }
             if interface == MPRIS_IFACE:
                 return {
-                    "Identity": "TurboVox 2000 Player",
+                    "Identity": "MegaVox 2000 Player",
                     "CanQuit": False,
                     "CanRaise": False,
                     "HasTrackList": False,
