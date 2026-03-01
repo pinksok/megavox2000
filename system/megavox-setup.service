@@ -6,8 +6,8 @@ Wants=NetworkManager.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=INSTALL_DIR_PLACEHOLDER/turbovox-boot.sh start
-ExecStop=INSTALL_DIR_PLACEHOLDER/turbovox-boot.sh stop
+ExecStart=INSTALL_DIR_PLACEHOLDER/megavox-boot.sh start
+ExecStop=INSTALL_DIR_PLACEHOLDER/megavox-boot.sh stop
 
 [Install]
 WantedBy=multi-user.target

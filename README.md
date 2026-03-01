@@ -64,13 +64,13 @@ To use YouTube Music, you need Google OAuth credentials:
 7. Create the config file on your Pi:
 
 ```bash
-cat > ~/turbovox2000/app/oauth_config.json << 'EOF'
+cat > ~/megavox2000/app/oauth_config.json << 'EOF'
 {
     "client_id": "YOUR_CLIENT_ID_HERE",
     "client_secret": "YOUR_CLIENT_SECRET_HERE"
 }
 EOF
-chmod 600 ~/turbovox2000/app/oauth_config.json
+chmod 600 ~/megavox2000/app/oauth_config.json
 ```
 
 8. Reboot: `sudo reboot`
@@ -112,13 +112,13 @@ The app uses a service provider pattern -- YouTube is the first implemented serv
 
 ```bash
 # Restart the player
-systemctl --user restart turbovox2000
+systemctl --user restart megavox2000
 
 # View logs
-journalctl --user -u turbovox2000 -f
+journalctl --user -u megavox2000 -f
 
 # Re-run Wi-Fi setup (force AP mode)
-sudo systemctl restart turbovox-setup
+sudo systemctl restart megavox-setup
 
 # Update yt-dlp
 sudo pip3 install --break-system-packages --upgrade yt-dlp

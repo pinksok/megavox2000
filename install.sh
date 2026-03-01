@@ -22,7 +22,7 @@ fi
 REAL_USER="${SUDO_USER:-pi}"
 REAL_HOME=$(eval echo "~$REAL_USER")
 REAL_UID=$(id -u "$REAL_USER")
-INSTALL_DIR="$REAL_HOME/turbovox2000"
+INSTALL_DIR="$REAL_HOME/megavox2000"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "  User:      $REAL_USER (UID $REAL_UID)"
@@ -97,7 +97,7 @@ else
 fi
 echo "  Done."
 
-# --- Step 6: Install user service (turbovox2000.service) ---
+# --- Step 6: Install user service (megavox2000.service) ---
 echo "[6/8] Installing user service..."
 USER_SERVICE_DIR="$REAL_HOME/.config/systemd/user"
 mkdir -p "$USER_SERVICE_DIR"
@@ -105,7 +105,7 @@ mkdir -p "$USER_SERVICE_DIR"
 # Generate service file with correct paths and UID
 sed -e "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" \
     -e "s|INSTALL_UID_PLACEHOLDER|$REAL_UID|g" \
-    "$SCRIPT_DIR/system/turbovox2000.service" > "$USER_SERVICE_DIR/turbovox2000.service"
+    "$SCRIPT_DIR/system/megavox2000.service" > "$USER_SERVICE_DIR/megavox2000.service"
 
 chown -R "$REAL_USER:$REAL_USER" "$REAL_HOME/.config"
 
@@ -116,36 +116,36 @@ loginctl enable-linger "$REAL_USER"
 sudo -u "$REAL_USER" XDG_RUNTIME_DIR="/run/user/$REAL_UID" \
     systemctl --user daemon-reload
 sudo -u "$REAL_USER" XDG_RUNTIME_DIR="/run/user/$REAL_UID" \
-    systemctl --user enable turbovox2000.service
+    systemctl --user enable megavox2000.service
 echo "  Done."
 
-# --- Step 7: Install boot service (turbovox-setup.service) ---
+# --- Step 7: Install boot service (megavox-setup.service) ---
 echo "[7/8] Installing boot service..."
 
 # Copy boot script and set the user
-cp "$SCRIPT_DIR/system/turbovox-boot.sh" "$INSTALL_DIR/turbovox-boot.sh"
-chmod +x "$INSTALL_DIR/turbovox-boot.sh"
-sed -i "s|^APP_USER=.*|APP_USER=\"$REAL_USER\"|" "$INSTALL_DIR/turbovox-boot.sh"
+cp "$SCRIPT_DIR/system/megavox-boot.sh" "$INSTALL_DIR/megavox-boot.sh"
+chmod +x "$INSTALL_DIR/megavox-boot.sh"
+sed -i "s|^APP_USER=.*|APP_USER=\"$REAL_USER\"|" "$INSTALL_DIR/megavox-boot.sh"
 
 # Generate system service with correct paths
 sed -e "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" \
-    "$SCRIPT_DIR/system/turbovox-setup.service" > /etc/systemd/system/turbovox-setup.service
+    "$SCRIPT_DIR/system/megavox-setup.service" > /etc/systemd/system/megavox-setup.service
 
 # Captive portal DNS config for AP mode
 mkdir -p /etc/NetworkManager/dnsmasq-shared.d
 cp "$SCRIPT_DIR/system/captive-portal.conf" /etc/NetworkManager/dnsmasq-shared.d/
 
 systemctl daemon-reload
-systemctl enable turbovox-setup.service
+systemctl enable megavox-setup.service
 echo "  Done."
 
 # --- Step 8: Configure permissions ---
 echo "[8/8] Configuring permissions..."
 # wifi_setup.py needs passwordless sudo for nmcli
-cat > /etc/sudoers.d/turbovox2000 << SUDOERS
+cat > /etc/sudoers.d/megavox2000 << SUDOERS
 $REAL_USER ALL=(ALL) NOPASSWD: /usr/bin/nmcli
 SUDOERS
-chmod 440 /etc/sudoers.d/turbovox2000
+chmod 440 /etc/sudoers.d/megavox2000
 echo "  Done."
 
 # --- Complete ---

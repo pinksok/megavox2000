@@ -11,7 +11,7 @@ Headless music player for Raspberry Pi with web-based control interface. Branded
 ## Repository Structure
 
 ```
-turbovox2000/
+megavox2000/
 ├── app/                         # Application code
 │   ├── app.py                   # Flask server, routes, service registration
 │   ├── config.py                # Paths, constants (BASE_DIR-relative)
@@ -32,9 +32,9 @@ turbovox2000/
 │       ├── index.html           # Main web UI
 │       └── setup.html           # Wi-Fi setup captive portal
 ├── system/                      # Systemd and boot config (templates)
-│   ├── turbovox2000.service     # User service template
-│   ├── turbovox-setup.service   # System boot service template
-│   ├── turbovox-boot.sh         # Boot script template
+│   ├── megavox2000.service      # User service template
+│   ├── megavox-setup.service    # System boot service template
+│   ├── megavox-boot.sh          # Boot script template
 │   └── captive-portal.conf      # DNS hijack for AP mode
 ├── install.sh                   # Full setup script
 ├── build-image.md               # SD card image build instructions
@@ -126,16 +126,16 @@ yt-dlp qrcode ytmusicapi
 ## Service Management
 
 ```bash
-systemctl --user restart turbovox2000
-systemctl --user status turbovox2000
-journalctl --user -u turbovox2000 -f
-sudo systemctl restart turbovox-setup   # Re-run Wi-Fi check
+systemctl --user restart megavox2000
+systemctl --user status megavox2000
+journalctl --user -u megavox2000 -f
+sudo systemctl restart megavox-setup   # Re-run Wi-Fi check
 ```
 
 ## Git Workflow
 
 ```bash
-cd /home/beau/turbovox2000
+cd /home/beau/megavox2000
 git add -A
 git commit -m "description
 

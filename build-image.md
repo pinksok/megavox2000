@@ -39,13 +39,13 @@ sudo bash install.sh
 ## Step 4: Add OAuth Credentials
 
 ```bash
-cat > ~/turbovox2000/app/oauth_config.json << 'EOF'
+cat > ~/megavox2000/app/oauth_config.json << 'EOF'
 {
     "client_id": "YOUR_CLIENT_ID",
     "client_secret": "YOUR_CLIENT_SECRET"
 }
 EOF
-chmod 600 ~/turbovox2000/app/oauth_config.json
+chmod 600 ~/megavox2000/app/oauth_config.json
 ```
 
 ## Step 5: Test
@@ -66,10 +66,10 @@ After reboot:
 
 ```bash
 # Remove runtime data (each device generates its own)
-rm -f ~/turbovox2000/app/oauth.json
-rm -f ~/turbovox2000/app/history.json
-rm -f ~/turbovox2000/app/service.json
-rm -f ~/turbovox2000/app/volume.json
+rm -f ~/megavox2000/app/oauth.json
+rm -f ~/megavox2000/app/history.json
+rm -f ~/megavox2000/app/service.json
+rm -f ~/megavox2000/app/volume.json
 
 # Remove saved Wi-Fi connections (so hotspot starts on new network)
 sudo nmcli connection delete "$(nmcli -t -f NAME,TYPE connection show | grep wireless | grep -v MegaVox | cut -d: -f1)" 2>/dev/null
