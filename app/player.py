@@ -101,13 +101,14 @@ def resolve_url(url):
                     return None, None, None, line.split("ERROR: ", 1)[-1], 0, False
             return None, None, None, err or "yt-dlp failed", 0, False
         lines = result.stdout.strip().splitlines()
-        # Output order: URL, title, thumbnail, duration
+        # Output order: title, URL, thumbnail, duration
         if len(lines) >= 4:
             duration = _parse_duration(lines[3])
-            is_live = duration == 0 or _check_is_live(url)
+            is_live = _check_is_live(url) if duration == 0 else False
             return lines[1], lines[0], lines[2], None, duration, is_live
         elif len(lines) >= 3:
-            return lines[1], lines[0], lines[2], None, 0, _check_is_live(url)
+            is_live = _check_is_live(url)
+            return lines[1], lines[0], lines[2], None, 0, is_live
         elif len(lines) >= 2:
             return lines[1], lines[0], None, None, 0, False
         elif len(lines) == 1:
@@ -280,37 +281,25 @@ def start_playback(url):
 
     log_fh = open(config.LOG_FILE, "w")
 
+    cmd = [
+        "ffplay",
+        "-nodisp",
+        "-vn",
+        "-framedrop",
+        "-sync", "audio",
+    ]
     if is_live:
-        cmd = [
-            "ffplay",
-            "-nodisp",
-            "-vn",
-            "-framedrop",
-            "-sync", "audio",
-            "-infbuf",
-            "-analyzeduration", "2000000",
-            "-probesize", "5000000",
-            "-reconnect", "1",
-            "-reconnect_streamed", "1",
-            "-reconnect_delay_max", "10",
-            "-reconnect_at_eof", "1",
-            audio_url,
-        ]
+        cmd += ["-infbuf"]
     else:
-        cmd = [
-            "ffplay",
-            "-nodisp",
-            "-vn",
-            "-framedrop",
-            "-sync", "audio",
-            "-autoexit",
-            "-analyzeduration", "500000",
-            "-probesize", "1000000",
-            "-reconnect", "1",
-            "-reconnect_streamed", "1",
-            "-reconnect_delay_max", "5",
-            audio_url,
-        ]
+        cmd += ["-autoexit"]
+    cmd += [
+        "-analyzeduration", "500000",
+        "-probesize", "1000000",
+        "-reconnect", "1",
+        "-reconnect_streamed", "1",
+        "-reconnect_delay_max", "5",
+        audio_url,
+    ]
 
     with state.player_lock:
         if state.play_generation != my_generation:
