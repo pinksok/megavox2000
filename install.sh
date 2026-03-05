@@ -45,6 +45,7 @@ apt-get install -y -qq \
     wireplumber \
     bluetooth \
     bluez-tools \
+    iptables \
     nodejs \
     network-manager \
     2>/dev/null
