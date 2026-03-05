@@ -50,7 +50,8 @@ def resolve_url(url):
             yt_dlp_base_args() + [
                 "-f", "bestaudio/best",
                 "--no-playlist",
-                "-j",
+                "-g",
+                "--print", "%(title)s\t%(thumbnail)s\t%(duration)s\t%(is_live)s",
                 url,
             ],
             capture_output=True,
@@ -61,7 +62,8 @@ def resolve_url(url):
             result = subprocess.run(
                 yt_dlp_base_args() + [
                     "--no-playlist",
-                    "-j",
+                    "-g",
+                    "--print", "%(title)s\t%(thumbnail)s\t%(duration)s\t%(is_live)s",
                     url,
                 ],
                 capture_output=True,
@@ -74,16 +76,20 @@ def resolve_url(url):
                 if "ERROR" in line:
                     return None, None, None, line.split("ERROR: ", 1)[-1], 0, False
             return None, None, None, err or "yt-dlp failed", 0, False
-        import json as _json
-        info = _json.loads(result.stdout.strip().splitlines()[-1])
-        audio_url = info.get("url", "")
-        title = info.get("title", "")
-        thumbnail = info.get("thumbnail", "")
-        duration = _parse_duration(info.get("duration") or 0)
-        is_live = info.get("is_live") is True
-        if not audio_url:
+        lines = result.stdout.strip().splitlines()
+        # -g outputs the URL first, then --print outputs the metadata line
+        if len(lines) >= 2:
+            audio_url = lines[0]
+            parts = lines[1].split("\t")
+            title = parts[0] if len(parts) > 0 else ""
+            thumbnail = parts[1] if len(parts) > 1 else ""
+            duration = _parse_duration(parts[2]) if len(parts) > 2 else 0
+            is_live = (parts[3].strip().lower() == "true") if len(parts) > 3 else False
+            return audio_url, title, thumbnail, None, duration, is_live
+        elif len(lines) == 1:
+            return lines[0], url, None, None, 0, False
+        else:
             return None, None, None, "No audio URL returned", 0, False
-        return audio_url, title, thumbnail, None, duration, is_live
     except subprocess.TimeoutExpired:
         return None, None, None, "URL resolution timed out", 0, False
     except Exception as e:
