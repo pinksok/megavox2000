@@ -43,15 +43,37 @@ def _pulse_env():
     }
 
 
+def _check_is_live(url):
+    """Quick check if a URL is a live stream using yt-dlp metadata."""
+    try:
+        result = subprocess.run(
+            yt_dlp_base_args() + [
+                "--no-playlist", "--skip-download",
+                "--print", "%(is_live)s",
+                url,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip().lower() == "true"
+    except Exception:
+        pass
+    return False
+
+
 def resolve_url(url):
-    """Use yt-dlp to get direct audio URL, title, thumbnail, duration, and live status."""
+    """Use yt-dlp to get direct audio URL, title, thumbnail, and duration."""
     try:
         result = subprocess.run(
             yt_dlp_base_args() + [
                 "-f", "bestaudio/best",
                 "--no-playlist",
                 "-g",
-                "--print", "%(title)s\t%(thumbnail)s\t%(duration)s\t%(is_live)s",
+                "--get-title",
+                "--get-thumbnail",
+                "--get-duration",
                 url,
             ],
             capture_output=True,
@@ -63,7 +85,9 @@ def resolve_url(url):
                 yt_dlp_base_args() + [
                     "--no-playlist",
                     "-g",
-                    "--print", "%(title)s\t%(thumbnail)s\t%(duration)s\t%(is_live)s",
+                    "--get-title",
+                    "--get-thumbnail",
+                    "--get-duration",
                     url,
                 ],
                 capture_output=True,
@@ -77,15 +101,15 @@ def resolve_url(url):
                     return None, None, None, line.split("ERROR: ", 1)[-1], 0, False
             return None, None, None, err or "yt-dlp failed", 0, False
         lines = result.stdout.strip().splitlines()
-        # -g outputs the URL first, then --print outputs the metadata line
-        if len(lines) >= 2:
-            audio_url = lines[0]
-            parts = lines[1].split("\t")
-            title = parts[0] if len(parts) > 0 else ""
-            thumbnail = parts[1] if len(parts) > 1 else ""
-            duration = _parse_duration(parts[2]) if len(parts) > 2 else 0
-            is_live = (parts[3].strip().lower() == "true") if len(parts) > 3 else False
-            return audio_url, title, thumbnail, None, duration, is_live
+        # Output order: URL, title, thumbnail, duration
+        if len(lines) >= 4:
+            duration = _parse_duration(lines[3])
+            is_live = duration == 0 or _check_is_live(url)
+            return lines[1], lines[0], lines[2], None, duration, is_live
+        elif len(lines) >= 3:
+            return lines[1], lines[0], lines[2], None, 0, _check_is_live(url)
+        elif len(lines) >= 2:
+            return lines[1], lines[0], None, None, 0, False
         elif len(lines) == 1:
             return lines[0], url, None, None, 0, False
         else:
