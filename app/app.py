@@ -235,8 +235,39 @@ def _restore_volume():
         pass
 
 
+def _auto_resume():
+    """Auto-resume the last played track after boot."""
+    import config
+    from history import get_history
+    from wifi_setup import is_setup_mode
+    time.sleep(10)  # Wait for PulseAudio and network
+    if is_setup_mode():
+        return
+    try:
+        history = get_history(1)
+        tracks = history.get("tracks", [])
+        if not tracks:
+            return
+        track = tracks[0]
+        track_id = track.get("id")
+        title = track.get("title", "")
+        if not track_id:
+            return
+        svc = services.get_service()
+        if not svc:
+            return
+        url = svc.build_url(track_id)
+        print("[AUTO-RESUME] Playing: {}".format(title), flush=True)
+        state.current_title = title
+        state.loading = True
+        start_playback(url)
+    except Exception as e:
+        print("[AUTO-RESUME] Error: {}".format(e), flush=True)
+
+
 if __name__ == "__main__":
     # Kill any orphaned ffplay processes from a previous crash/restart
     subprocess.run(['killall', '-9', 'ffplay'], capture_output=True)
     _restore_volume()
+    threading.Thread(target=_auto_resume, daemon=True).start()
     app.run(host="0.0.0.0", port=5000)
