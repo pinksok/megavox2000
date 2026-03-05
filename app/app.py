@@ -240,11 +240,14 @@ def _restore_volume():
 
 def _auto_resume():
     """Auto-resume the last played track after boot."""
-    import config
     from history import get_history
     from wifi_setup import is_setup_mode
     time.sleep(10)  # Wait for PulseAudio and network
     if is_setup_mode():
+        return
+    # Don't resume if something is already playing (e.g. user started a track)
+    if state.player_process or state.loading:
+        print("[AUTO-RESUME] Skipped — already playing.", flush=True)
         return
     try:
         history = get_history(1)
@@ -260,7 +263,10 @@ def _auto_resume():
         if not svc:
             return
         url = svc.build_url(track_id)
+        # Kill any orphaned ffplay before auto-resume
+        subprocess.run(['killall', '-9', 'ffplay'], capture_output=True)
         print("[AUTO-RESUME] Playing: {}".format(title), flush=True)
+        stop_player()
         state.current_title = title
         state.loading = True
         start_playback(url)
