@@ -34,6 +34,7 @@ echo ""
 echo "[1/8] Installing system packages..."
 apt-get update -qq
 apt-get install -y -qq \
+    python3-pip \
     python3-flask \
     python3-dbus \
     python3-gi \
@@ -57,16 +58,20 @@ echo "  Done."
 
 # --- Step 3: Copy application files ---
 echo "[3/8] Installing application files..."
-mkdir -p "$INSTALL_DIR/app/templates"
-cp "$SCRIPT_DIR/app/"*.py "$INSTALL_DIR/app/"
-cp "$SCRIPT_DIR/app/favicon.svg" "$INSTALL_DIR/app/"
-cp "$SCRIPT_DIR/app/oauth_config.json.example" "$INSTALL_DIR/app/"
-cp "$SCRIPT_DIR/app/templates/"*.html "$INSTALL_DIR/app/templates/"
+if [ "$SCRIPT_DIR" = "$INSTALL_DIR" ]; then
+    echo "  Running from install directory, skipping copy."
+else
+    mkdir -p "$INSTALL_DIR/app/templates"
+    cp "$SCRIPT_DIR/app/"*.py "$INSTALL_DIR/app/"
+    cp "$SCRIPT_DIR/app/favicon.svg" "$INSTALL_DIR/app/"
+    cp "$SCRIPT_DIR/app/oauth_config.json.example" "$INSTALL_DIR/app/"
+    cp "$SCRIPT_DIR/app/templates/"*.html "$INSTALL_DIR/app/templates/"
 
-# Copy oauth_config.json if it exists in source (for image building)
-if [ -f "$SCRIPT_DIR/app/oauth_config.json" ]; then
-    cp "$SCRIPT_DIR/app/oauth_config.json" "$INSTALL_DIR/app/"
-    chmod 600 "$INSTALL_DIR/app/oauth_config.json"
+    # Copy oauth_config.json if it exists in source (for image building)
+    if [ -f "$SCRIPT_DIR/app/oauth_config.json" ]; then
+        cp "$SCRIPT_DIR/app/oauth_config.json" "$INSTALL_DIR/app/"
+        chmod 600 "$INSTALL_DIR/app/oauth_config.json"
+    fi
 fi
 
 chown -R "$REAL_USER:$REAL_USER" "$INSTALL_DIR"
