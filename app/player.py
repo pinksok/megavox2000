@@ -289,15 +289,24 @@ def start_playback(url):
         "-sync", "audio",
     ]
     if is_live:
-        cmd += ["-infbuf"]
+        cmd += [
+            "-infbuf",
+            "-analyzeduration", "3000000",
+            "-probesize", "5000000",
+            "-reconnect", "1",
+            "-reconnect_streamed", "1",
+            "-reconnect_delay_max", "10",
+        ]
     else:
-        cmd += ["-autoexit"]
+        cmd += [
+            "-autoexit",
+            "-analyzeduration", "500000",
+            "-probesize", "1000000",
+            "-reconnect", "1",
+            "-reconnect_streamed", "1",
+            "-reconnect_delay_max", "5",
+        ]
     cmd += [
-        "-analyzeduration", "500000",
-        "-probesize", "1000000",
-        "-reconnect", "1",
-        "-reconnect_streamed", "1",
-        "-reconnect_delay_max", "5",
         audio_url,
     ]
 
