@@ -21,6 +21,7 @@ playback_start_time = 0
 playback_elapsed = 0
 current_audio_url = ""
 is_live = False
+live_feeder = None
 
 # Lock for player state mutations (play_generation, player_process, paused, loading)
 player_lock = threading.Lock()

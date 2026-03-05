@@ -281,35 +281,6 @@ def start_playback(url):
 
     log_fh = open(config.LOG_FILE, "w")
 
-    cmd = [
-        "ffplay",
-        "-nodisp",
-        "-vn",
-        "-framedrop",
-        "-sync", "audio",
-    ]
-    if is_live:
-        cmd += [
-            "-infbuf",
-            "-analyzeduration", "3000000",
-            "-probesize", "5000000",
-            "-reconnect", "1",
-            "-reconnect_streamed", "1",
-            "-reconnect_delay_max", "10",
-        ]
-    else:
-        cmd += [
-            "-autoexit",
-            "-analyzeduration", "500000",
-            "-probesize", "1000000",
-            "-reconnect", "1",
-            "-reconnect_streamed", "1",
-            "-reconnect_delay_max", "5",
-        ]
-    cmd += [
-        audio_url,
-    ]
-
     with state.player_lock:
         if state.play_generation != my_generation:
             log_fh.close()
@@ -320,19 +291,89 @@ def start_playback(url):
         state.paused = False
         state.is_live = is_live
 
-        proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=log_fh,
-            stderr=log_fh,
-            env=env,
-            preexec_fn=os.setsid,
-        )
-        state.player_process = proc
-        state.current_audio_url = audio_url
-        state.current_duration = duration
-        state.playback_start_time = time.time()
-        state.playback_elapsed = 0
+    if is_live:
+        # Pipe yt-dlp audio output into ffplay for reliable live streaming.
+        # yt-dlp handles buffering, reconnection, and segment fetching.
+        ytdlp_cmd = yt_dlp_base_args() + [
+            "-f", "bestaudio/best",
+            "--no-playlist",
+            "-o", "-",
+            url,
+        ]
+        ffplay_cmd = [
+            "ffplay",
+            "-nodisp",
+            "-vn",
+            "-framedrop",
+            "-sync", "audio",
+            "-infbuf",
+            "-analyzeduration", "5000000",
+            "-probesize", "10000000",
+            "-i", "pipe:0",
+        ]
+
+        with state.player_lock:
+            if state.play_generation != my_generation:
+                log_fh.close()
+                return
+
+            ytdlp_proc = subprocess.Popen(
+                ytdlp_cmd,
+                stdout=subprocess.PIPE,
+                stderr=log_fh,
+                env=env,
+                preexec_fn=os.setsid,
+            )
+            proc = subprocess.Popen(
+                ffplay_cmd,
+                stdin=ytdlp_proc.stdout,
+                stdout=log_fh,
+                stderr=log_fh,
+                env=env,
+                preexec_fn=os.setsid,
+            )
+            # Allow yt-dlp to receive SIGPIPE when ffplay exits
+            ytdlp_proc.stdout.close()
+            state.player_process = proc
+            state.live_feeder = ytdlp_proc
+            state.current_audio_url = audio_url
+            state.current_duration = duration
+            state.playback_start_time = time.time()
+            state.playback_elapsed = 0
+    else:
+        cmd = [
+            "ffplay",
+            "-nodisp",
+            "-vn",
+            "-framedrop",
+            "-sync", "audio",
+            "-autoexit",
+            "-analyzeduration", "500000",
+            "-probesize", "1000000",
+            "-reconnect", "1",
+            "-reconnect_streamed", "1",
+            "-reconnect_delay_max", "5",
+            audio_url,
+        ]
+
+        with state.player_lock:
+            if state.play_generation != my_generation:
+                log_fh.close()
+                return
+
+            proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=log_fh,
+                stderr=log_fh,
+                env=env,
+                preexec_fn=os.setsid,
+            )
+            state.player_process = proc
+            state.current_audio_url = audio_url
+            state.current_duration = duration
+            state.playback_start_time = time.time()
+            state.playback_elapsed = 0
 
     # Unmute our specific sink input once it appears
     def _unmute_new_stream():
@@ -355,6 +396,28 @@ def start_playback(url):
     watcher.start()
 
 
+def _kill_proc(proc, was_paused=False):
+    """Kill a process group, resuming first if paused."""
+    try:
+        if was_paused:
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGCONT)
+            except Exception:
+                pass
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGCONT)
+        except Exception:
+            pass
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        proc.wait(timeout=3)
+    except Exception:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            proc.wait(timeout=2)
+        except Exception:
+            pass
+
+
 def stop_player():
     """Kill ffplay process, unmute if paused, reset state."""
     with state.player_lock:
@@ -364,6 +427,8 @@ def stop_player():
         state.paused = False
         proc = state.player_process
         state.player_process = None
+        feeder = state.live_feeder
+        state.live_feeder = None
         state.current_audio_url = ""
         state.current_duration = 0
         state.playback_start_time = 0
@@ -371,24 +436,9 @@ def stop_player():
         state.is_live = False
 
     if proc:
-        try:
-            if was_paused:
-                try:
-                    os.killpg(os.getpgid(proc.pid), signal.SIGCONT)
-                except Exception:
-                    pass
-            try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGCONT)
-            except Exception:
-                pass
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            proc.wait(timeout=3)
-        except Exception:
-            try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                proc.wait(timeout=2)
-            except Exception:
-                pass
+        _kill_proc(proc, was_paused)
+    if feeder:
+        _kill_proc(feeder)
 
 
 def seek_to(position):
@@ -479,25 +529,13 @@ def _kill_current_player():
         was_paused = state.paused
         proc = state.player_process
         state.player_process = None
+        feeder = state.live_feeder
+        state.live_feeder = None
 
     if proc:
-        try:
-            if was_paused:
-                try:
-                    os.killpg(os.getpgid(proc.pid), signal.SIGCONT)
-                except Exception:
-                    pass
-            try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGCONT)
-            except Exception:
-                pass
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            proc.wait(timeout=3)
-        except Exception:
-            try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                proc.wait(timeout=2)
-            except Exception:
+        _kill_proc(proc, was_paused)
+    if feeder:
+        _kill_proc(feeder)
                 pass
 
 
