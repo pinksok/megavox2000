@@ -486,7 +486,6 @@ def _kill_current_player():
         _kill_proc(proc, was_paused)
     if feeder:
         _kill_proc(feeder)
-                pass
 
 
 def toggle_pause_internal():
