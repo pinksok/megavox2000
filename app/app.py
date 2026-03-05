@@ -91,6 +91,9 @@ def play():
     state.paused = False
     state.loading = True
 
+    # Kill any lingering ffplay that stop_player might have missed
+    subprocess.run(['killall', '-9', 'ffplay'], capture_output=True)
+
     t = threading.Thread(target=start_playback, args=(url,), daemon=True)
     t.start()
 
