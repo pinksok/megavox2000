@@ -124,6 +124,8 @@ def stop():
 
 @app.route("/seek", methods=["POST"])
 def seek():
+    if state.is_live:
+        return jsonify({"error": "Cannot seek live stream"})
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid request"}), 400
@@ -178,10 +180,10 @@ def status():
     duration = state.current_duration
 
     if state.last_error:
-        return jsonify({"title": "", "thumbnail": "", "state": "", "error": state.last_error, "paused": state.paused, "elapsed": 0, "duration": 0})
+        return jsonify({"title": "", "thumbnail": "", "state": "", "error": state.last_error, "paused": state.paused, "elapsed": 0, "duration": 0, "is_live": False})
 
     if state.player_process and state.player_process.poll() is not None:
-        return jsonify({"title": "", "thumbnail": "", "state": "Idle", "paused": False, "elapsed": 0, "duration": 0})
+        return jsonify({"title": "", "thumbnail": "", "state": "Idle", "paused": False, "elapsed": 0, "duration": 0, "is_live": False})
 
     if state.player_process and state.player_process.poll() is None:
         state.loading = False
@@ -196,7 +198,7 @@ def status():
         elapsed += time.time() - state.playback_start_time
     elapsed = min(int(elapsed), duration) if duration else int(elapsed)
 
-    return jsonify({"title": state.current_title, "thumbnail": state.current_thumbnail, "state": play_state, "paused": state.paused, "elapsed": elapsed, "duration": duration})
+    return jsonify({"title": state.current_title, "thumbnail": state.current_thumbnail, "state": play_state, "paused": state.paused, "elapsed": elapsed, "duration": duration, "is_live": state.is_live})
 
 
 @app.route("/service", methods=["GET"])

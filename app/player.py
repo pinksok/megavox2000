@@ -44,16 +44,13 @@ def _pulse_env():
 
 
 def resolve_url(url):
-    """Use yt-dlp to get direct audio URL, title, thumbnail, and duration."""
+    """Use yt-dlp to get direct audio URL, title, thumbnail, duration, and live status."""
     try:
         result = subprocess.run(
             yt_dlp_base_args() + [
                 "-f", "bestaudio/best",
                 "--no-playlist",
-                "-g",
-                "--get-title",
-                "--get-thumbnail",
-                "--get-duration",
+                "-j",
                 url,
             ],
             capture_output=True,
@@ -64,10 +61,7 @@ def resolve_url(url):
             result = subprocess.run(
                 yt_dlp_base_args() + [
                     "--no-playlist",
-                    "-g",
-                    "--get-title",
-                    "--get-thumbnail",
-                    "--get-duration",
+                    "-j",
                     url,
                 ],
                 capture_output=True,
@@ -78,24 +72,22 @@ def resolve_url(url):
             err = result.stderr.strip()
             for line in err.splitlines():
                 if "ERROR" in line:
-                    return None, None, None, line.split("ERROR: ", 1)[-1], 0
-            return None, None, None, err or "yt-dlp failed", 0
-        lines = result.stdout.strip().splitlines()
-        # Output order: URL, title, thumbnail, duration
-        if len(lines) >= 4:
-            return lines[1], lines[0], lines[2], None, _parse_duration(lines[3])
-        elif len(lines) >= 3:
-            return lines[1], lines[0], lines[2], None, 0
-        elif len(lines) >= 2:
-            return lines[1], lines[0], None, None, 0
-        elif len(lines) == 1:
-            return lines[0], url, None, None, 0
-        else:
-            return None, None, None, "No audio URL returned", 0
+                    return None, None, None, line.split("ERROR: ", 1)[-1], 0, False
+            return None, None, None, err or "yt-dlp failed", 0, False
+        import json as _json
+        info = _json.loads(result.stdout.strip().splitlines()[-1])
+        audio_url = info.get("url", "")
+        title = info.get("title", "")
+        thumbnail = info.get("thumbnail", "")
+        duration = _parse_duration(info.get("duration") or 0)
+        is_live = info.get("is_live") is True
+        if not audio_url:
+            return None, None, None, "No audio URL returned", 0, False
+        return audio_url, title, thumbnail, None, duration, is_live
     except subprocess.TimeoutExpired:
-        return None, None, None, "URL resolution timed out", 0
+        return None, None, None, "URL resolution timed out", 0, False
     except Exception as e:
-        return None, None, None, str(e), 0
+        return None, None, None, str(e), 0, False
 
 
 def fetch_playlist(playlist_url, offset=0, limit=20):
@@ -233,7 +225,7 @@ def start_playback(url):
     with state.player_lock:
         my_generation = state.play_generation
 
-    audio_url, title, thumbnail, error, duration = resolve_url(url)
+    audio_url, title, thumbnail, error, duration, is_live = resolve_url(url)
 
     with state.player_lock:
         if state.play_generation != my_generation:
@@ -258,20 +250,37 @@ def start_playback(url):
 
     log_fh = open(config.LOG_FILE, "w")
 
-    cmd = [
-        "ffplay",
-        "-nodisp",
-        "-vn",
-        "-framedrop",
-        "-sync", "audio",
-        "-autoexit",
-        "-analyzeduration", "500000",
-        "-probesize", "1000000",
-        "-reconnect", "1",
-        "-reconnect_streamed", "1",
-        "-reconnect_delay_max", "5",
-        audio_url,
-    ]
+    if is_live:
+        cmd = [
+            "ffplay",
+            "-nodisp",
+            "-vn",
+            "-framedrop",
+            "-sync", "audio",
+            "-infbuf",
+            "-analyzeduration", "2000000",
+            "-probesize", "5000000",
+            "-reconnect", "1",
+            "-reconnect_streamed", "1",
+            "-reconnect_delay_max", "10",
+            "-reconnect_at_eof", "1",
+            audio_url,
+        ]
+    else:
+        cmd = [
+            "ffplay",
+            "-nodisp",
+            "-vn",
+            "-framedrop",
+            "-sync", "audio",
+            "-autoexit",
+            "-analyzeduration", "500000",
+            "-probesize", "1000000",
+            "-reconnect", "1",
+            "-reconnect_streamed", "1",
+            "-reconnect_delay_max", "5",
+            audio_url,
+        ]
 
     with state.player_lock:
         if state.play_generation != my_generation:
@@ -281,6 +290,7 @@ def start_playback(url):
         state.current_title = title or url
         state.current_thumbnail = thumbnail or ""
         state.paused = False
+        state.is_live = is_live
 
         proc = subprocess.Popen(
             cmd,
@@ -330,6 +340,7 @@ def stop_player():
         state.current_duration = 0
         state.playback_start_time = 0
         state.playback_elapsed = 0
+        state.is_live = False
 
     if proc:
         try:

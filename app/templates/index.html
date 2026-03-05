@@ -538,6 +538,7 @@
         var progressElapsed = 0;
         var progressDuration = 0;
         var progressPlaying = false;
+        var progressIsLive = false;
 
         function formatTime(secs) {
             secs = Math.max(0, Math.floor(secs));
@@ -548,7 +549,12 @@
 
         function updateProgressUI() {
             var section = document.getElementById('progress-section');
-            if (progressDuration > 0) {
+            if (progressIsLive && progressPlaying) {
+                section.classList.add('visible');
+                document.getElementById('progress-elapsed').textContent = 'LIVE';
+                document.getElementById('progress-duration').textContent = '';
+                document.getElementById('progress-bar').style.width = '100%';
+            } else if (progressDuration > 0) {
                 section.classList.add('visible');
                 document.getElementById('progress-elapsed').textContent = formatTime(progressElapsed);
                 document.getElementById('progress-duration').textContent = formatTime(progressDuration);
@@ -561,7 +567,7 @@
 
         // Tick elapsed every second for smooth updates
         setInterval(function() {
-            if (progressPlaying && progressDuration > 0) {
+            if (progressPlaying && progressDuration > 0 && !progressIsLive) {
                 progressElapsed = Math.min(progressElapsed + 1, progressDuration);
                 updateProgressUI();
             }
@@ -569,7 +575,7 @@
 
         // Seek on progress bar click
         document.getElementById('progress-bar').parentElement.addEventListener('click', function(e) {
-            if (progressDuration <= 0) return;
+            if (progressIsLive || progressDuration <= 0) return;
             var rect = this.getBoundingClientRect();
             var pct = (e.clientX - rect.left) / rect.width;
             var pos = Math.floor(pct * progressDuration);
@@ -1068,10 +1074,10 @@
                     isPaused = j.paused;
                 }
                 refreshVolume();
-                // Detect Playing→Idle transition for auto-next
+                // Detect Playing→Idle transition for auto-next (skip for live streams)
                 var nowPlaying = (j.state === 'Playing' || j.state === 'Paused');
                 var isLoading = (j.state === 'Resolving audio...');
-                if (wasPlaying && !nowPlaying && !isLoading && !j.error) {
+                if (wasPlaying && !nowPlaying && !isLoading && !j.error && !j.is_live) {
                     autoPlayNext();
                 }
                 // Don't update wasPlaying during loading — preserve the Playing state
@@ -1085,6 +1091,7 @@
                 // Sync progress bar
                 if (j.duration !== undefined) progressDuration = j.duration;
                 if (j.elapsed !== undefined) progressElapsed = j.elapsed;
+                progressIsLive = !!j.is_live;
                 progressPlaying = (j.state === 'Playing');
                 updateProgressUI();
             } catch(e) {}
