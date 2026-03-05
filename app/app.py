@@ -6,7 +6,7 @@ import os
 import threading
 import time
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import redirect, Response, Flask, render_template, request, jsonify, send_from_directory
 
 import state
 import services
@@ -17,7 +17,6 @@ import json
 from player import stop_player, start_playback, toggle_pause_internal, seek_to, _pulse_env
 from auth import auth_bp
 from library import library_bp
-from mpris import mpris_thread_func
 from config import VOLUME_FILE, DEFAULT_VOLUME
 from wifi_setup import setup_bp, is_setup_mode
 
@@ -40,6 +39,22 @@ def setup_mode_intercept():
     if is_setup_mode():
         if request.path.startswith('/setup/') or request.path == '/favicon.svg':
             return None
+        # Captive portal detection — redirect OS probes to setup page
+        # Windows
+        if 'connecttest' in request.host or request.path == '/connecttest.txt':
+            return redirect('http://10.42.0.1/')
+        if request.path == '/ncsi.txt':
+            return redirect('http://10.42.0.1/')
+        if 'msftconnecttest' in request.host:
+            return redirect('http://10.42.0.1/')
+        # Android
+        if request.path == '/generate_204' or request.path == '/gen_204':
+            return redirect('http://10.42.0.1/')
+        if 'connectivitycheck' in request.host:
+            return redirect('http://10.42.0.1/')
+        # Apple iOS/macOS
+        if request.path == '/hotspot-detect.html':
+            return Response('<HTML><HEAD><TITLE>MegaVox</TITLE></HEAD><BODY>MegaVox</BODY></HTML>', status=200, content_type='text/html')
         return render_template('setup.html')
 
 
@@ -224,7 +239,4 @@ if __name__ == "__main__":
     # Kill any orphaned ffplay processes from a previous crash/restart
     subprocess.run(['killall', '-9', 'ffplay'], capture_output=True)
     _restore_volume()
-    # Start MPRIS D-Bus service for BT hardware button support
-    mpris_t = threading.Thread(target=mpris_thread_func, daemon=True)
-    mpris_t.start()
     app.run(host="0.0.0.0", port=5000)

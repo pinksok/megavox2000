@@ -2,25 +2,30 @@
 
 ## Project Overview
 
-Headless music player for Raspberry Pi with web-based control interface. Branded as "MegaVox 2000 - Mega Bass Digital XBS Processing System" with a retro 90s terminal aesthetic. Supports multiple music services via a provider abstraction layer. Primary target: Raspberry Pi 3, distributed as pre-built SD card images.
+Headless music player for Raspberry Pi with web-based control interface. Branded as "MegaVox 2000 - Mega Bass Digital XBS Processing System" with a retro 90s terminal aesthetic. Supports multiple music services via a provider abstraction layer.
 
 **Active services**: YouTube Music (fully implemented), Spotify (stub), Pandora (stub).
-**Auth**: Service-specific OAuth flows (Google device flow for YouTube).
+**Auth**: Google OAuth2 device flow with QR code. YouTube Data API v3 for library. yt-dlp for audio.
 **Distribution**: Pre-built SD card images for end users, install script for developers.
+
+## Branches
+
+- **`main`** -- Production branch. Targets Raspberry Pi 3. No Bluetooth UI. Ships on SD card images.
+- **`dev`** -- Development branch. Targets Raspberry Pi 5. Includes Bluetooth MPRIS and connect UI.
 
 ## Repository Structure
 
 ```
 megavox2000/
 ├── app/                         # Application code
-│   ├── app.py                   # Flask server, routes, service registration
+│   ├── app.py                   # Flask server, routes, captive portal, service registration
 │   ├── config.py                # Paths, constants (BASE_DIR-relative)
 │   ├── state.py                 # Shared mutable playback state
 │   ├── history.py               # Local playback history
 │   ├── player.py                # yt-dlp, ffplay, PulseAudio control
-│   ├── mpris.py                 # MPRIS D-Bus for Bluetooth buttons
+│   ├── mpris.py                 # MPRIS D-Bus for Bluetooth buttons (dev branch only)
 │   ├── services.py              # Service registry/dispatcher
-│   ├── service_youtube.py       # YouTube adapter (reads oauth_config.json)
+│   ├── service_youtube.py       # YouTube adapter (direct API v3, reads oauth_config.json)
 │   ├── service_spotify.py       # Spotify adapter (stub)
 │   ├── service_pandora.py       # Pandora adapter (stub)
 │   ├── auth.py                  # Auth route dispatcher
@@ -48,13 +53,16 @@ megavox2000/
 ### No hardcoded secrets
 OAuth credentials are loaded from `app/oauth_config.json` (gitignored). For SD card images, credentials are baked in during image build but never committed to git.
 
+### YouTube Data API v3 (not ytmusicapi)
+ytmusicapi's OAuth is broken (HTTP 400 on all calls). We bypass it entirely and call YouTube Data API v3 directly with `requests`. Search still uses ytmusicapi unauthenticated (no quota cost). yt-dlp handles audio URL resolution without auth.
+
 ### BASE_DIR-relative paths
 All runtime files (history.json, volume.json, service.json, oauth.json) are stored relative to the app directory using `os.path.dirname(os.path.abspath(__file__))`. No hardcoded home directory paths.
 
 ### Dynamic UID
 PulseAudio environment uses `os.getuid()` instead of hardcoded UID 1000. Works regardless of which user runs the service.
 
-### Pi 3 optimized
+### Pi 3 optimized (main branch)
 - ffplay: `-analyzeduration 500000 -probesize 1000000` (reduced from Pi 5 values)
 - yt-dlp: 45s timeout (increased from 30s for slower CPU)
 - yt-dlp path: `yt-dlp` (PATH resolution, not hardcoded `/usr/local/bin/`)
@@ -102,7 +110,7 @@ parse_track_id(url) -> str | None
 - **Hostname**: `mega` (set by install.sh)
 - **Port redirect**: iptables 80 -> 5000 (set by boot service)
 - **AP mode**: "MegaVox2000-Setup" hotspot, password: mega2000, WPS disabled
-- **Captive portal**: DNS hijack via dnsmasq config, only active in AP mode
+- **Captive portal**: DNS hijack via dnsmasq config + Flask before_request handler for OS probes
 - **Mode file**: `/tmp/megavox-mode` ("ap" or "client")
 
 ## Important Notes
@@ -117,10 +125,13 @@ parse_track_id(url) -> str | None
 ```bash
 # System packages:
 python3-flask python3-dbus python3-gi python3-requests ffmpeg
-pipewire pipewire-pulse wireplumber bluetooth bluez-tools nodejs
+pipewire pipewire-pulse wireplumber nodejs
 
 # pip packages:
 yt-dlp qrcode ytmusicapi
+
+# Dev branch only (Bluetooth):
+bluetooth bluez-tools
 ```
 
 ## Service Management
