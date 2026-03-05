@@ -40,6 +40,30 @@
             font-weight: bold;
             text-transform: uppercase;
         }
+        .bt-status {
+            position: absolute;
+            right: 0;
+            top: 0;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #6a9955;
+            cursor: pointer;
+        }
+        .bt-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #6a9955;
+            box-shadow: 0 0 4px rgba(106, 153, 85, 0.5);
+        }
+        .bt-dot.connected { background: #6a9955; animation: pulse 1s infinite; }
+        .bt-dot.disconnected { background: #c24848; box-shadow: 0 0 4px rgba(194, 72, 72, 0.5); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
         .input-group {
             position: relative;
             display: flex;
@@ -450,6 +474,10 @@
         <div class="header">
             <h1>MegaVox 2000</h1>
             <div style="font-family:'Courier New',monospace;font-size:0.7rem;color:#7ac5cd;letter-spacing:4px;margin-top:4px;margin-bottom:6px;text-shadow:0 0 6px rgba(122,197,205,0.6),0 0 12px rgba(122,197,205,0.3);border-top:1px solid #4a6a4a;border-bottom:1px solid #4a6a4a;padding:4px 0;">MEGA BASS DIGITAL XBS PROCESSING SYSTEM</div>
+            <div class="bt-status" id="bt-status">
+                <div class="bt-dot" id="bt-dot"></div>
+                <span id="bt-name">...</span>
+            </div>
         </div>
         <div style="text-align:center;margin-bottom:8px;">
             <select id="service-select" onchange="switchService(this.value)" style="background:#000;color:#6a9955;border:1px solid #4a6a4a;font-family:'Courier New',monospace;font-size:0.75rem;padding:3px 6px;outline:none;cursor:pointer;">
@@ -991,6 +1019,24 @@
             } catch(e) {}
         }
 
+        async function refreshBt() {
+            try {
+                var r = await fetch('/bluetooth');
+                var j = await r.json();
+                var dot = document.getElementById('bt-dot');
+                var name = document.getElementById('bt-name');
+                if (j.connected) {
+                    dot.className = 'bt-dot connected';
+                    name.textContent = j.device_name;
+                } else {
+                    dot.className = 'bt-dot disconnected';
+                    name.textContent = 'Disconnected';
+                }
+            } catch(e) {
+                document.getElementById('bt-name').textContent = '?';
+            }
+        }
+
         async function refreshVolume() {
             if (volumeDragging) return;
             try {
@@ -1001,6 +1047,7 @@
             } catch(e) {}
         }
 
+        refreshBt();
         refreshVolume();
 
         // Tabs and auto-resume only after auth is confirmed
@@ -1089,6 +1136,9 @@
                 updateProgressUI();
             } catch(e) {}
         }, 5000);
+
+        // Poll BT status every 15s
+        setInterval(refreshBt, 15000);
 
         // Equalizer Visualizer - Block style
         var viz = document.getElementById('visualizer');

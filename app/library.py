@@ -1,5 +1,7 @@
 """Library routes - delegates to active service's library adapter."""
 
+import subprocess
+
 from flask import Blueprint, jsonify, request
 
 from services import get_service
@@ -51,4 +53,30 @@ def library(source):
         return jsonify(svc.get_liked(offset, limit))
 
     return jsonify({"error": "Unknown source"})
+
+
+@library_bp.route("/bluetooth")
+def bluetooth_status():
+    """Check Bluetooth connection status."""
+    try:
+        result = subprocess.run(
+            ["bluetoothctl", "info"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        output = result.stdout
+        connected = False
+        device_name = ""
+        for line in output.splitlines():
+            line = line.strip()
+            if line.startswith("Name:"):
+                device_name = line.split(":", 1)[1].strip()
+            if line.startswith("Connected:") and "yes" in line.lower():
+                connected = True
+        if connected and device_name:
+            return jsonify({"connected": True, "device_name": device_name})
+        return jsonify({"connected": False, "device_name": ""})
+    except Exception:
+        return jsonify({"connected": False, "device_name": ""})
 
