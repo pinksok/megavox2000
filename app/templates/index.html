@@ -638,6 +638,7 @@
             document.getElementById('url').value = '';
             document.getElementById('go-btn').style.display = 'none';
             api('/play', {url: url});
+            setTimeout(function() { loadTab('history'); }, 8000);
         }
 
         function playTrack(id, title, source, index) {
@@ -657,6 +658,8 @@
             }
             updatePlayPauseBtn();
             api('/play', {id: id, title: title});
+            // Refresh history after backend has time to resolve and log
+            setTimeout(function() { loadTab('history'); }, 8000);
         }
 
         function toggleAutoNext(checked) {
@@ -1078,6 +1081,7 @@
                 var nowPlaying = (j.state === 'Playing' || j.state === 'Paused');
                 var isLoading = (j.state === 'Resolving audio...');
                 if (wasPlaying && !nowPlaying && !isLoading && !j.error && !j.is_live) {
+                    loadTab('history');
                     autoPlayNext();
                 }
                 // Don't update wasPlaying during loading — preserve the Playing state
