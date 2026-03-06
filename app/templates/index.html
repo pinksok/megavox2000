@@ -656,6 +656,7 @@
             document.getElementById('status').classList.remove('error');
             isPlaying = true;
             isPaused = false;
+            vizScanning = true; scanPos = 0;
             autoNextSource = null;
             autoNextIndex = -1;
             localStorage.removeItem('autoNextSource');
@@ -678,6 +679,7 @@
             document.getElementById('status').classList.remove('error');
             isPlaying = true;
             isPaused = false;
+            vizScanning = true; scanPos = 0;
             if (source !== undefined && index !== undefined) {
                 autoNextSource = source;
                 autoNextIndex = index;
@@ -1081,35 +1083,55 @@
             }
         }
 
-        function _getSkipTracks() {
-            // Use active queue, or fall back to history
+        function _findCurrentIdx(tracks) {
+            var curId = localStorage.getItem('lastPlayingId');
+            if (!curId || !tracks) return -1;
+            for (var i = 0; i < tracks.length; i++) {
+                if (tracks[i].id === curId) return i;
+            }
+            return -1;
+        }
+
+        async function _ensureSkipTracks() {
+            // Try the active queue first
             var source = autoNextSource;
             var tracks;
             if (source === 'playlist') {
                 tracks = currentPlaylistTracks;
-            } else if (source) {
+            } else if (source && source !== 'search') {
+                if (!tabData[source] || tabData[source].length === 0) {
+                    await loadTab(source);
+                }
                 tracks = tabData[source];
             }
+            // Fall back to history
             if (!tracks || tracks.length === 0) {
+                if (!tabData.history || tabData.history.length === 0) {
+                    await loadTab('history');
+                }
                 source = 'history';
                 tracks = tabData.history;
             }
             return { source: source, tracks: tracks };
         }
 
-        function skipPrev() {
-            var q = _getSkipTracks();
+        async function skipPrev() {
+            var q = await _ensureSkipTracks();
             if (!q.tracks || q.tracks.length === 0) return;
-            var idx = (q.source === autoNextSource && autoNextIndex >= 0) ? autoNextIndex - 1 : 0;
+            var cur = _findCurrentIdx(q.tracks);
+            if (cur < 0 && q.source === autoNextSource && autoNextIndex >= 0) cur = autoNextIndex;
+            var idx = cur - 1;
             if (idx < 0) return;
             var t = q.tracks[idx];
             playTrack(t.id, t.title, q.source, idx);
         }
 
-        function skipNext() {
-            var q = _getSkipTracks();
+        async function skipNext() {
+            var q = await _ensureSkipTracks();
             if (!q.tracks || q.tracks.length === 0) return;
-            var idx = (q.source === autoNextSource && autoNextIndex >= 0) ? autoNextIndex + 1 : 0;
+            var cur = _findCurrentIdx(q.tracks);
+            if (cur < 0 && q.source === autoNextSource && autoNextIndex >= 0) cur = autoNextIndex;
+            var idx = cur + 1;
             if (idx >= q.tracks.length) return;
             var t = q.tracks[idx];
             playTrack(t.id, t.title, q.source, idx);
@@ -1155,6 +1177,7 @@
                 // Track whether something is actively playing
                 isPlaying = nowPlaying;
                 vizActive = (j.state === 'Playing');
+                vizScanning = isLoading;
                 updatePlayPauseBtn();
                 // Sync progress bar
                 if (j.duration !== undefined) progressDuration = j.duration;
@@ -1216,7 +1239,24 @@
             columns.push({ blocks: blocks, level: 0, target: 0, velocity: 0 });
         }
 
+        var vizScanning = false;
+        var scanPos = 0;
+        var scanTrail = [];
+        var scanColors = ['#2a8a2a', '#3a9a2a', '#5a9a2a', '#7a8a2a', '#9a7a2a', '#b06a2a', '#c25a2a', '#c24848', '#8a2a2a'];
+        var scanGlows = ['rgba(42,138,42,0.7)', 'rgba(58,154,42,0.6)', 'rgba(90,154,42,0.5)', 'rgba(122,138,42,0.4)', 'rgba(154,122,42,0.35)', 'rgba(176,106,42,0.3)', 'rgba(194,90,42,0.25)', 'rgba(194,72,72,0.2)', 'rgba(138,42,42,0.15)'];
+
         function newTargets() {
+            if (vizScanning) {
+                scanPos = (scanPos + 2) % numCols;
+                scanTrail.unshift(scanPos);
+                if (scanTrail.length > scanColors.length) scanTrail.pop();
+                for (var i = 0; i < numCols; i++) {
+                    var trailIdx = scanTrail.indexOf(i);
+                    columns[i]._scanColor = trailIdx >= 0 ? scanColors[trailIdx] : null;
+                    columns[i]._scanGlow = trailIdx >= 0 ? scanGlows[trailIdx] : null;
+                }
+                return;
+            }
             if (!vizActive) {
                 for (var i = 0; i < numCols; i++) {
                     columns[i].target = 0;
@@ -1255,14 +1295,27 @@
                 if (c.level < 0) c.level = 0;
                 if (c.level > numBlocks) c.level = numBlocks;
 
-                var lit = Math.round(c.level);
-                for (var j = 0; j < numBlocks; j++) {
-                    if (j < lit) {
-                        c.blocks[j].style.background = blockColors[j];
-                        c.blocks[j].style.boxShadow = '0 0 4px ' + blockGlows[j];
-                    } else {
+                if (vizScanning && c._scanColor) {
+                    // Knight Rider: light up entire column with scan color
+                    for (var j = 0; j < numBlocks; j++) {
+                        c.blocks[j].style.background = c._scanColor;
+                        c.blocks[j].style.boxShadow = '0 0 6px ' + c._scanGlow;
+                    }
+                } else if (vizScanning && !c._scanColor) {
+                    for (var j = 0; j < numBlocks; j++) {
                         c.blocks[j].style.background = '#111';
                         c.blocks[j].style.boxShadow = 'none';
+                    }
+                } else {
+                    var lit = Math.round(c.level);
+                    for (var j = 0; j < numBlocks; j++) {
+                        if (j < lit) {
+                            c.blocks[j].style.background = blockColors[j];
+                            c.blocks[j].style.boxShadow = '0 0 4px ' + blockGlows[j];
+                        } else {
+                            c.blocks[j].style.background = '#111';
+                            c.blocks[j].style.boxShadow = 'none';
+                        }
                     }
                 }
             }
