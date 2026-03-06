@@ -67,6 +67,14 @@ PulseAudio environment uses `os.getuid()` instead of hardcoded UID 1000. Works r
 - yt-dlp: 45s timeout (increased from 30s for slower CPU)
 - yt-dlp path: `yt-dlp` (PATH resolution, not hardcoded `/usr/local/bin/`)
 
+### Live stream support (WIP -- NOT WORKING)
+Live YouTube streams (live radio channels) are detected via `_check_is_live()` in `player.py`. The frontend shows a "LIVE" indicator, disables seeking, and skips auto-next. However, **live audio playback itself does not work** -- ffplay with `-infbuf` on a Pi 3 cannot reliably stream live content. Needs a fundamentally different approach (mpv, buffering proxy, or format transcoding).
+
+#### yt-dlp pitfalls (do NOT repeat these)
+- **Never use `-j` for URL resolution** -- the JSON `url` field is not a playable direct URL. Always use `-g`.
+- **Never mix `-g`/`--get-*` with `--print`** -- output line order becomes unpredictable.
+- **yt-dlp `--get-*` output order**: title first, then URL (from `-g`), then thumbnail, then duration -- despite `-g` being listed first in the command.
+
 ### Service templates
 System service files use `INSTALL_DIR_PLACEHOLDER` and `INSTALL_UID_PLACEHOLDER` markers that `install.sh` replaces with actual values via `sed`.
 

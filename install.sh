@@ -43,6 +43,7 @@ apt-get install -y -qq \
     pipewire \
     pipewire-pulse \
     wireplumber \
+    pulseaudio-utils \
     bluetooth \
     bluez-tools \
     iptables \
