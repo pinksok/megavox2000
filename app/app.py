@@ -97,7 +97,7 @@ def play():
     t = threading.Thread(target=start_playback, args=(url,), daemon=True)
     t.start()
 
-    return jsonify({"status": "Resolving audio...", "title": data.get("title", url), "thumbnail": ""})
+    return jsonify({"status": "ACQUIRING SIGNAL...", "title": data.get("title", url), "thumbnail": ""})
 
 
 @app.route("/pause", methods=["POST"])
@@ -189,7 +189,7 @@ def status():
         state.loading = False
         play_state = "Paused" if state.paused else "Playing"
     elif state.loading:
-        play_state = "Resolving audio..."
+        play_state = "ACQUIRING SIGNAL..."
     else:
         play_state = "Idle"
 

@@ -460,8 +460,10 @@
             <button class="go-btn" id="go-btn" onclick="playUrl()" style="display:none">Go</button>
         </div>
         <div class="controls">
+            <button class="btn-play" id="prev-btn" onclick="skipPrev()" title="Previous track" style="padding:8px 10px;font-size:0.75rem;">|&#9664;</button>
             <button class="btn-play" id="play-pause-btn" onclick="playPause()">Play</button>
-            <label id="auto-next-toggle" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.7rem;color:#6a9955;margin-left:8px;user-select:none;">
+            <button class="btn-play" id="next-btn" onclick="skipNext()" title="Next track" style="padding:8px 10px;font-size:0.75rem;">&#9654;|</button>
+            <label id="auto-next-toggle" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:0.85rem;color:#6a9955;margin-left:8px;user-select:none;">
                 <input type="checkbox" id="auto-next-cb" onchange="toggleAutoNext(this.checked)" style="accent-color:#6a9955;cursor:pointer;">
                 Auto Next
             </label>
@@ -530,8 +532,9 @@
 
         // Auto-next state
         var autoNextEnabled = localStorage.getItem('autoNextEnabled') !== 'false'; // default on
-        var autoNextSource = null;  // 'history', 'liked', 'playlist', 'search', or null
-        var autoNextIndex = -1;
+        var autoNextSource = localStorage.getItem('autoNextSource') || null;
+        var autoNextIndex = parseInt(localStorage.getItem('autoNextIndex'), 10);
+        if (isNaN(autoNextIndex)) autoNextIndex = -1;
         var wasPlaying = false; // for detecting Playing→Idle transition
 
         // Progress tracking
@@ -628,12 +631,14 @@
             localStorage.setItem('lastPlayingUrl', url);
             localStorage.removeItem('lastPlayingId');
             localStorage.removeItem('lastPlayingTitle');
-            document.getElementById('status').textContent = 'Resolving audio...';
+            document.getElementById('status').textContent = 'ACQUIRING SIGNAL...';
             document.getElementById('status').classList.remove('error');
             isPlaying = true;
             isPaused = false;
             autoNextSource = null;
             autoNextIndex = -1;
+            localStorage.removeItem('autoNextSource');
+            localStorage.removeItem('autoNextIndex');
             updatePlayPauseBtn();
             document.getElementById('url').value = '';
             document.getElementById('go-btn').style.display = 'none';
@@ -648,13 +653,15 @@
             document.getElementById('url').value = '';
             document.getElementById('go-btn').style.display = 'none';
             document.getElementById('now-playing').textContent = title;
-            document.getElementById('status').textContent = 'Resolving audio...';
+            document.getElementById('status').textContent = 'ACQUIRING SIGNAL...';
             document.getElementById('status').classList.remove('error');
             isPlaying = true;
             isPaused = false;
             if (source !== undefined && index !== undefined) {
                 autoNextSource = source;
                 autoNextIndex = index;
+                localStorage.setItem('autoNextSource', source);
+                localStorage.setItem('autoNextIndex', index);
             }
             updatePlayPauseBtn();
             api('/play', {id: id, title: title});
@@ -1048,7 +1055,43 @@
                 // End of list
                 autoNextSource = null;
                 autoNextIndex = -1;
+                localStorage.removeItem('autoNextSource');
+                localStorage.removeItem('autoNextIndex');
             }
+        }
+
+        function _getSkipTracks() {
+            // Use active queue, or fall back to history
+            var source = autoNextSource;
+            var tracks;
+            if (source === 'playlist') {
+                tracks = currentPlaylistTracks;
+            } else if (source) {
+                tracks = tabData[source];
+            }
+            if (!tracks || tracks.length === 0) {
+                source = 'history';
+                tracks = tabData.history;
+            }
+            return { source: source, tracks: tracks };
+        }
+
+        function skipPrev() {
+            var q = _getSkipTracks();
+            if (!q.tracks || q.tracks.length === 0) return;
+            var idx = (q.source === autoNextSource && autoNextIndex >= 0) ? autoNextIndex - 1 : 0;
+            if (idx < 0) return;
+            var t = q.tracks[idx];
+            playTrack(t.id, t.title, q.source, idx);
+        }
+
+        function skipNext() {
+            var q = _getSkipTracks();
+            if (!q.tracks || q.tracks.length === 0) return;
+            var idx = (q.source === autoNextSource && autoNextIndex >= 0) ? autoNextIndex + 1 : 0;
+            if (idx >= q.tracks.length) return;
+            var t = q.tracks[idx];
+            playTrack(t.id, t.title, q.source, idx);
         }
 
         setInterval(async function() {
@@ -1079,7 +1122,7 @@
                 refreshVolume();
                 // Detect Playing→Idle transition for auto-next (skip for live streams)
                 var nowPlaying = (j.state === 'Playing' || j.state === 'Paused');
-                var isLoading = (j.state === 'Resolving audio...');
+                var isLoading = (j.state === 'ACQUIRING SIGNAL...');
                 if (wasPlaying && !nowPlaying && !isLoading && !j.error && !j.is_live) {
                     loadTab('history');
                     autoPlayNext();
