@@ -121,6 +121,63 @@ parse_track_id(url) -> str | None
 - **Captive portal**: DNS hijack via dnsmasq config + Flask before_request handler for OS probes
 - **Mode file**: `/tmp/megavox-mode` ("ap" or "client")
 
+## Planned Feature: SPI Display for Cassette Window
+
+### Overview
+Add-on physical display mounted in the boombox cassette deck window (2.5" x 1" opening). Shows track info and real-time spectrum analyzer. Standalone service — no changes to existing MegaVox codebase required.
+
+### Hardware
+- **Display**: BuyDisplay 2.25" bar-type IPS TFT LCD, 76x284 pixels, ST7789P3 driver, SPI interface (~$5)
+  - Active area: 14.8mm x 55.3mm (0.58" x 2.18") — fits inside the 2.5" x 1" cassette window
+  - Board size: 30mm x 63mm (1.18" x 2.48")
+  - Mounted landscape (284px horizontal, 76px vertical)
+  - Sources: [BuyDisplay](https://www.buydisplay.com/spi-tft-2-25-lcd-76x284-display-module-st7789-breakout-board-for-arduino-raspberry-pi), [Amazon](https://www.amazon.com/Display-Screen-76x284-Long-Strip-Interface/dp/B0FBW9T8FS)
+
+### GPIO Wiring
+| Display Pin | Pi GPIO | Pi Physical Pin |
+|---|---|---|
+| VCC | 3.3V | Pin 1 |
+| GND | GND | Pin 6 |
+| SCL/SCLK | GPIO 11 | Pin 23 |
+| SDA/MOSI | GPIO 10 | Pin 19 |
+| CS | GPIO 8 | Pin 24 |
+| DC/RS | GPIO 25 | Pin 22 |
+| RST | GPIO 24 | Pin 18 |
+| BL | GPIO 18 (or 3.3V for always-on) | Pin 12 |
+
+### Software Stack
+- **Display rendering**: `luma.lcd` or `spidev` + `Pillow` for frame rendering
+- **Spectrum data**: C.A.V.A. (Console-based Audio Visualizer for ALSA) in raw output mode, taps into PipeWire
+- **Display service**: Standalone Python script as its own systemd user service
+  - Polls `/status` endpoint for track title, artist, elapsed time
+  - Reads C.A.V.A. raw output for spectrum bars
+  - Shows scanning/loading animation (matching web UI) during track load
+
+### Display Layout (76px tall x 284px wide)
+```
+┌──────────────────────────────────────────┐
+│  TRACK TITLE SCROLLING...          12:34 │  (~16px)
+│  Artist Name                             │  (~12px)
+│  ▁ ▃ ▅ ▇ █ ▅ ▃ ▁ ▃ ▇ █ ▅ ▃ ▁ ▃ ▅ ▇ █ │  (~44px)
+│                                          │  (~4px padding)
+└──────────────────────────────────────────┘
+```
+
+### Additional Dependencies
+```bash
+# System packages:
+cava
+
+# pip packages:
+luma.lcd Pillow
+```
+
+### Integration Notes
+- No changes to app.py, player.py, or index.html needed
+- Display service reads from existing `/status` API endpoint
+- SPI must be enabled: `sudo raspi-config` → Interface Options → SPI
+- Runs as a separate systemd user service (e.g., `megavox-display.service`)
+
 ## Important Notes
 
 - **Never commit oauth_config.json** -- contains OAuth client credentials
