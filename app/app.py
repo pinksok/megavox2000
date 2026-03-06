@@ -201,6 +201,39 @@ def status():
     return jsonify({"title": state.current_title, "thumbnail": state.current_thumbnail, "state": play_state, "paused": state.paused, "elapsed": elapsed, "duration": duration, "is_live": state.is_live})
 
 
+@app.route("/wifi-signal")
+def wifi_signal():
+    try:
+        with open("/proc/net/wireless") as f:
+            lines = f.readlines()
+        if len(lines) >= 3:
+            # Third line has the data: iface | status | quality | level | noise
+            parts = lines[2].split()
+            level = float(parts[3])  # dBm (negative)
+            # Convert dBm to 0-4 bars
+            if level >= -45:
+                bars = 4
+            elif level >= -55:
+                bars = 3
+            elif level >= -65:
+                bars = 2
+            elif level >= -75:
+                bars = 1
+            else:
+                bars = 0
+            # Get connected SSID
+            ssid = ""
+            try:
+                result = subprocess.run(["iwgetid", "-r"], capture_output=True, text=True, timeout=2)
+                ssid = result.stdout.strip()
+            except Exception:
+                pass
+            return jsonify({"bars": bars, "dbm": round(level, 1), "ssid": ssid})
+    except Exception:
+        pass
+    return jsonify({"bars": -1, "dbm": 0})
+
+
 @app.route("/service", methods=["GET"])
 def get_service_route():
     all_svcs = services.get_all_services()

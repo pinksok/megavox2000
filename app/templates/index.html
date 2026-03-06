@@ -102,6 +102,26 @@
         .btn-play { background: linear-gradient(145deg, #5a8a5a, #4a7a4a); }
         .btn-pause { background: linear-gradient(145deg, #8a8a4a, #7a7a3a); color: #000; }
         .btn-stop { background: linear-gradient(145deg, #8a4a4a, #7a3a3a); }
+        .wifi-signal {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 16px;
+        }
+        .wifi-signal .bar {
+            width: 4px;
+            background: #3a3a3a;
+            border: 1px solid #4a6a4a;
+        }
+        .wifi-signal .bar.active { background: #6a9955; border-color: #6a9955; }
+        .wifi-signal .bar:nth-child(1) { height: 4px; }
+        .wifi-signal .bar:nth-child(2) { height: 7px; }
+        .wifi-signal .bar:nth-child(3) { height: 11px; }
+        .wifi-signal .bar:nth-child(4) { height: 16px; }
+        .wifi-signal .no-signal { color: #c24848; font-size: 0.5rem; font-family: 'Courier New', monospace; }
         .player-info {
             display: flex;
             align-items: center;
@@ -448,6 +468,9 @@
     </div>
     <div class="player">
         <div class="header">
+            <div class="wifi-signal" id="wifi-signal" title="Wi-Fi signal">
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            </div>
             <h1>MegaVox 2000</h1>
             <div style="font-family:'Courier New',monospace;font-size:0.7rem;color:#7ac5cd;letter-spacing:4px;margin-top:4px;margin-bottom:6px;text-shadow:0 0 6px rgba(122,197,205,0.6),0 0 12px rgba(122,197,205,0.3);border-top:1px solid #4a6a4a;border-bottom:1px solid #4a6a4a;padding:4px 0;">MEGA BASS DIGITAL XBS PROCESSING SYSTEM</div>
         </div>
@@ -1143,6 +1166,20 @@
                 updateProgressUI();
             } catch(e) {}
         }, 5000);
+
+        // Wi-Fi signal strength (poll every 30s)
+        function updateWifiSignal() {
+            fetch('/wifi-signal').then(function(r) { return r.json(); }).then(function(j) {
+                var el = document.getElementById('wifi-signal');
+                var bars = el.querySelectorAll('.bar');
+                for (var i = 0; i < bars.length; i++) {
+                    bars[i].classList.toggle('active', j.bars > i);
+                }
+                el.title = j.bars >= 0 ? (j.ssid || 'Unknown') + ' | ' + j.dbm + ' dBm' : 'No Wi-Fi';
+            }).catch(function() {});
+        }
+        updateWifiSignal();
+        setInterval(updateWifiSignal, 30000);
 
         // Equalizer Visualizer - Block style
         var viz = document.getElementById('visualizer');
