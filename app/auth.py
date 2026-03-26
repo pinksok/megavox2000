@@ -3,6 +3,7 @@
 import io
 
 import qrcode
+import qrcode.image.svg
 from flask import Blueprint, jsonify, request, send_file
 
 import state
@@ -43,12 +44,13 @@ def auth_complete():
 
 @auth_bp.route("/auth/qr")
 def auth_qr():
-    """Generate QR code for the current auth URL."""
+    """Generate QR code for the current auth URL as SVG."""
     url = request.args.get("url", "")
     if not url:
         return "No URL", 400
-    qr = qrcode.make(url, border=2)
+    factory = qrcode.image.svg.SvgPathImage
+    qr = qrcode.make(url, border=2, image_factory=factory)
     buf = io.BytesIO()
-    qr.save(buf, format="PNG")
+    qr.save(buf)
     buf.seek(0)
-    return send_file(buf, mimetype="image/png")
+    return send_file(buf, mimetype="image/svg+xml")

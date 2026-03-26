@@ -30,16 +30,31 @@ If you received an SD card with MegaVox 2000 pre-installed:
 
 **Windows users:** If prompted for a WPS PIN instead of a password, go to Settings > Network > Wi-Fi > Manage known networks, forget "MegaVox2000-Setup", and reconnect using the password `mega2000`.
 
-## Install From Scratch
+## Setup from Windows (Recommended)
 
-Requirements: Raspberry Pi 3B/3B+ (also works on Pi 4, Pi 5) running Raspberry Pi OS Lite (Bookworm or later).
+Prepare an SD card from your Windows PC -- no ethernet required.
+
+1. Flash **Raspberry Pi OS Lite (64-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+   - In settings: set username `pi`, a password, your Wi-Fi credentials, and enable SSH
+2. After flashing, open Git Bash in the repo directory and run:
+   ```bash
+   bash prep-sd.sh E
+   ```
+   (Replace `E` with your SD card's drive letter. It will ask for OAuth credentials -- enter them or press Enter to skip.)
+3. Eject the SD card, insert into Pi, power on
+4. Wait ~5-10 minutes -- the Pi connects to Wi-Fi, installs everything, and reboots
+5. Visit **http://mega.local** from any device on your network
+
+On a new network (no saved Wi-Fi), the Pi broadcasts **MegaVox2000-Setup** -- connect and use the setup page.
+
+## Install From Scratch (SSH)
+
+Requirements: Raspberry Pi 3B/3B+ (also works on Pi 4, Pi 5) running Raspberry Pi OS Lite (Bookworm or later) with network access.
 
 ```bash
-# Clone the repo
+sudo apt install -y git
 git clone https://github.com/pinksok/megavox2000.git
 cd megavox2000
-
-# Run the installer
 sudo bash install.sh
 ```
 

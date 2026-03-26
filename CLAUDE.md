@@ -6,7 +6,7 @@ Headless music player for Raspberry Pi with web-based control interface. Branded
 
 **Active services**: YouTube Music (fully implemented), Spotify (stub), Pandora (stub).
 **Auth**: Google OAuth2 device flow with QR code. YouTube Data API v3 for library. yt-dlp for audio.
-**Distribution**: Pre-built SD card images for end users, install script for developers.
+**Distribution**: `prep-sd.sh` (Windows SD card prep), `install.sh` (direct Pi install), pre-built SD card images (planned).
 
 ## Branches
 
@@ -41,7 +41,8 @@ megavox2000/
 │   ├── megavox-setup.service    # System boot service template
 │   ├── megavox-boot.sh          # Boot script template
 │   └── captive-portal.conf      # DNS hijack for AP mode
-├── install.sh                   # Full setup script
+├── install.sh                   # Full setup script (runs on Pi)
+├── prep-sd.sh                   # SD card prep from Windows (copies files, sets up firstrun)
 ├── build-image.md               # SD card image build instructions
 ├── README.md                    # End-user documentation
 ├── LICENSE                      # MIT
