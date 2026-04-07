@@ -38,6 +38,12 @@ def _load_oauth_config():
 _client_id, _client_secret = _load_oauth_config()
 
 
+def reload_oauth_config():
+    """Reload OAuth credentials from config file (called after config update)."""
+    global _client_id, _client_secret
+    _client_id, _client_secret = _load_oauth_config()
+
+
 # --- Internal helpers ---
 
 def _save_oauth(token_data):

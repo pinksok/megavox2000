@@ -460,7 +460,14 @@
                 <p>Enter this code:</p>
                 <div class="auth-code" id="auth-code"></div>
             </div>
+            <div id="auth-config-form" style="display:none;text-align:left;margin:10px 0;">
+                <p style="font-size:0.8rem;color:#7ac5cd;margin-bottom:8px;">Enter your Google OAuth credentials:</p>
+                <input type="text" id="config-client-id" placeholder="Client ID" style="width:100%;box-sizing:border-box;background:#000;color:#6a9955;border:1px solid #4a6a4a;font-family:'Courier New',monospace;font-size:0.75rem;padding:6px;margin-bottom:6px;outline:none;" />
+                <input type="text" id="config-client-secret" placeholder="Client Secret" style="width:100%;box-sizing:border-box;background:#000;color:#6a9955;border:1px solid #4a6a4a;font-family:'Courier New',monospace;font-size:0.75rem;padding:6px;margin-bottom:8px;outline:none;" />
+                <button class="auth-btn" onclick="saveConfig()" style="width:100%;">Save & Sign In</button>
+            </div>
             <button class="auth-btn" id="auth-btn" onclick="startAuth()">Sign In</button>
+            <a href="#" id="auth-config-link" onclick="showConfigForm();return false;" style="display:none;color:#7ac5cd;font-size:0.75rem;margin-top:8px;display:none;">Update Credentials</a>
             <button class="auth-btn" id="auth-back-btn" onclick="authGoBack()" style="display:none;margin-top:8px;background:linear-gradient(145deg,#4a4a4a,#3a3a3a);border-color:#5a5a5a;">Back</button>
         </div>
     </div>
@@ -1333,6 +1340,11 @@
                     // Show back button so user can switch to a different service
                     document.getElementById('auth-back-btn').style.display = '';
                     document.getElementById('auth-overlay').classList.add('active');
+                    // If OAuth not configured, show config form directly
+                    if (j.error && j.error.toLowerCase().includes('not configured')) {
+                        document.getElementById('auth-msg').textContent = j.error;
+                        showConfigForm();
+                    }
                 }
             } catch(e) {}
         }
@@ -1348,6 +1360,10 @@
                     document.getElementById('auth-msg').textContent = 'Error: ' + j.error;
                     btn.disabled = false;
                     btn.textContent = 'Try Again';
+                    var err = j.error.toLowerCase();
+                    if (err.includes('not configured') || err.includes('secret') || err.includes('client')) {
+                        showConfigForm();
+                    }
                     return;
                 }
                 document.getElementById('auth-code').textContent = j.user_code;
@@ -1383,10 +1399,59 @@
                         if (lastId && lastTitle) {
                             document.getElementById('now-playing').textContent = lastTitle;
                         }
+                    } else if (j.error) {
+                        var err = j.error.toLowerCase();
+                        // "waiting for authorization" and "wait a moment" are expected — keep polling
+                        if (err.includes('waiting') || err.includes('wait a moment')) return;
+                        // Fatal error — stop polling, show error with retry
+                        clearInterval(authPollTimer);
+                        document.getElementById('auth-msg').textContent = 'Error: ' + j.error;
+                        document.getElementById('auth-code-display').style.display = 'none';
+                        document.getElementById('auth-btn').style.display = '';
+                        document.getElementById('auth-btn').disabled = false;
+                        document.getElementById('auth-btn').textContent = 'Try Again';
+                        // Show config form link for credential errors
+                        if (err.includes('secret') || err.includes('client') || err.includes('not configured')) {
+                            showConfigForm();
+                        }
                     }
-                    // If still pending, just keep polling silently
                 } catch(e) {}
             }, 5000);
+        }
+
+        function showConfigForm() {
+            document.getElementById('auth-config-form').style.display = 'block';
+            document.getElementById('auth-btn').style.display = 'none';
+            document.getElementById('auth-code-display').style.display = 'none';
+        }
+
+        async function saveConfig() {
+            var clientId = document.getElementById('config-client-id').value.trim();
+            var clientSecret = document.getElementById('config-client-secret').value.trim();
+            if (!clientId || !clientSecret) {
+                document.getElementById('auth-msg').textContent = 'Both fields are required.';
+                return;
+            }
+            document.getElementById('auth-msg').textContent = 'Saving...';
+            try {
+                var r = await fetch('/auth/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({client_id: clientId, client_secret: clientSecret})
+                });
+                var j = await r.json();
+                if (j.error) {
+                    document.getElementById('auth-msg').textContent = 'Error: ' + j.error;
+                    return;
+                }
+                // Config saved — hide form, start auth flow
+                document.getElementById('auth-config-form').style.display = 'none';
+                document.getElementById('auth-msg').textContent = 'Credentials saved. Starting sign-in...';
+                document.getElementById('auth-btn').style.display = '';
+                startAuth();
+            } catch(e) {
+                document.getElementById('auth-msg').textContent = 'Connection error. Try again.';
+            }
         }
 
         // Service selection
@@ -1452,6 +1517,7 @@
             // Reset auth overlay state
             document.getElementById('auth-overlay').classList.remove('active');
             document.getElementById('auth-code-display').style.display = 'none';
+            document.getElementById('auth-config-form').style.display = 'none';
             document.getElementById('auth-btn').style.display = '';
             document.getElementById('auth-btn').disabled = false;
             document.getElementById('auth-btn').textContent = 'Sign In';

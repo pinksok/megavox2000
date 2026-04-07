@@ -90,6 +90,17 @@ else
     echo "  No OAuth credentials — skipped. Add them later:"
     echo "    ~/megavox2000/app/oauth_config.json"
 fi
+# SSH public key (for remote access without password)
+SSH_PUBKEY=""
+SSH_PUBKEY_FILE="$HOME/.ssh/id_ed25519.pub"
+if [ -f "$SSH_PUBKEY_FILE" ]; then
+    SSH_PUBKEY=$(cat "$SSH_PUBKEY_FILE")
+    cp "$SSH_PUBKEY_FILE" "$DEST/ssh_pubkey"
+    echo "  SSH public key copied for remote access."
+else
+    echo "  No SSH key found at $SSH_PUBKEY_FILE — skipped."
+    echo "  (You won't have SSH access to the Pi without a key.)"
+fi
 echo "  Done."
 
 # --- Write firstrun.sh (append to Imager's if it exists) ---
@@ -148,6 +159,21 @@ chmod 755 "$REAL_HOME/megavox2000/install.sh"
 # Protect OAuth credentials
 if [ -f "$REAL_HOME/megavox2000/app/oauth_config.json" ]; then
     chmod 600 "$REAL_HOME/megavox2000/app/oauth_config.json"
+fi
+
+# Install SSH public key for remote access
+if [ -f "$REAL_HOME/megavox2000/ssh_pubkey" ]; then
+    SSH_DIR="$REAL_HOME/.ssh"
+    mkdir -p "$SSH_DIR"
+    KEY=$(cat "$REAL_HOME/megavox2000/ssh_pubkey")
+    if ! grep -qF "$KEY" "$SSH_DIR/authorized_keys" 2>/dev/null; then
+        echo "$KEY" >> "$SSH_DIR/authorized_keys"
+    fi
+    chown -R "$REAL_USER:$REAL_USER" "$SSH_DIR"
+    chmod 700 "$SSH_DIR"
+    chmod 600 "$SSH_DIR/authorized_keys"
+    rm -f "$REAL_HOME/megavox2000/ssh_pubkey"
+    echo "SSH public key installed."
 fi
 
 # Run the MegaVox installer
