@@ -5,7 +5,7 @@
 Headless music player for Raspberry Pi with web-based control interface. Branded as "MegaVox 2000 - Mega Bass Digital XBS Processing System" with a retro 90s terminal aesthetic. Supports multiple music services via a provider abstraction layer.
 
 **Active services**: YouTube Music (fully implemented), Spotify (stub), Pandora (stub).
-**Auth**: Google OAuth2 device flow with QR code. YouTube Data API v3 for library. yt-dlp for audio.
+**Auth**: Google OAuth2 device flow with QR code. YouTube Data API v3 for library. yt-dlp for audio. OAuth credentials can be updated from the web UI via `/auth/config` (no SSH needed).
 **Distribution**: `prep-sd.sh` (Windows SD card prep), `install.sh` (direct Pi install), pre-built SD card images (planned).
 
 ## Branches
@@ -28,7 +28,7 @@ megavox2000/
 │   ├── service_youtube.py       # YouTube adapter (direct API v3, reads oauth_config.json)
 │   ├── service_spotify.py       # Spotify adapter (stub)
 │   ├── service_pandora.py       # Pandora adapter (stub)
-│   ├── auth.py                  # Auth route dispatcher
+│   ├── auth.py                  # Auth route dispatcher + /auth/config credential update
 │   ├── library.py               # Library route dispatcher
 │   ├── wifi_setup.py            # Wi-Fi onboarding Blueprint
 │   ├── favicon.svg              # Browser icon
