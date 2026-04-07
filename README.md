@@ -30,41 +30,46 @@ If you received an SD card with MegaVox 2000 pre-installed:
 
 **Windows users:** If prompted for a WPS PIN instead of a password, go to Settings > Network > Wi-Fi > Manage known networks, forget "MegaVox2000-Setup", and reconnect using the password `mega2000`.
 
-## Setup from Windows (Recommended)
+## Setup from Scratch (Recommended)
 
-Prepare an SD card from your Windows PC -- no ethernet required.
+Requirements: Raspberry Pi 3B/3B+ (also works on Pi 4, Pi 5), microSD card, Wi-Fi.
 
-1. Flash **Raspberry Pi OS Lite (64-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
-   - In settings: set username `pi`, a password, your Wi-Fi credentials, and enable SSH
-2. After flashing, open Git Bash in the repo directory and run:
+1. Flash **Raspberry Pi OS Lite (32-bit)** with [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+   - Select **Raspberry Pi 3** as the device
+   - In settings: set hostname `mega`, username `mega`, a password, your Wi-Fi credentials, and enable SSH (password authentication)
+2. Insert SD card into Pi and power on. Wait for it to connect to Wi-Fi (~1-2 minutes)
+3. SSH in and install:
    ```bash
-   bash prep-sd.sh E
+   ssh mega@mega.local
+   # Add your SSH key for future access (optional):
+   mkdir -p ~/.ssh && chmod 700 ~/.ssh
+   echo "your-public-key-here" >> ~/.ssh/authorized_keys
+   chmod 600 ~/.ssh/authorized_keys
+   # Install MegaVox:
+   sudo apt update && sudo apt install -y git
+   git clone https://github.com/pinksok/megavox2000.git
+   cd megavox2000
+   sudo bash install.sh
    ```
-   (Replace `E` with your SD card's drive letter. It will ask for OAuth credentials -- enter them or press Enter to skip.)
-3. Eject the SD card, insert into Pi, power on
-4. Wait ~5-10 minutes -- the Pi connects to Wi-Fi, installs everything, and reboots
+4. Add OAuth credentials (see below) and reboot: `sudo reboot`
 5. Visit **http://mega.local** from any device on your network
 
 On a new network (no saved Wi-Fi), the Pi broadcasts **MegaVox2000-Setup** -- connect and use the setup page.
 
-## Install From Scratch (SSH)
+**Note:** Pi 3 requires 32-bit OS. 64-bit will not boot (solid red LED, no green activity).
 
-Requirements: Raspberry Pi 3B/3B+ (also works on Pi 4, Pi 5) running Raspberry Pi OS Lite (Bookworm or later) with network access.
+## Automated SD Card Prep (Alternative)
 
-```bash
-sudo apt install -y git
-git clone https://github.com/pinksok/megavox2000.git
-cd megavox2000
-sudo bash install.sh
-```
+If you prefer a one-step SD card prep from Windows:
 
-The installer will:
-- Install all system and Python dependencies
-- Set up the application and systemd services
-- Set the hostname to `mega`
-- Configure Wi-Fi onboarding hotspot
-
-After installation, add your OAuth credentials (see below) and reboot.
+1. Flash Pi OS Lite (32-bit) with Raspberry Pi Imager (hostname `mega`, username `mega`, Wi-Fi, SSH)
+2. After flashing, open Git Bash in the repo directory and run:
+   ```bash
+   bash prep-sd.sh E
+   ```
+   (Replace `E` with your SD card's drive letter. It will ask for OAuth credentials.)
+3. Eject, insert into Pi, power on. Wait ~5-10 minutes for install + reboot
+4. Visit **http://mega.local**
 
 ## Google Cloud Project Setup
 
@@ -76,19 +81,25 @@ To use YouTube Music, you need Google OAuth credentials:
 4. Go to **Credentials** > **Create Credentials** > **OAuth client ID**
 5. Application type: **TVs and Limited Input devices**
 6. Copy the Client ID and Client Secret
-7. Create the config file on your Pi:
+7. Add credentials using **one** of these methods:
 
-```bash
-cat > ~/megavox2000/app/oauth_config.json << 'EOF'
-{
-    "client_id": "YOUR_CLIENT_ID_HERE",
-    "client_secret": "YOUR_CLIENT_SECRET_HERE"
-}
-EOF
-chmod 600 ~/megavox2000/app/oauth_config.json
-```
+   **Option A: From the web UI (easiest)**
+   Visit `http://mega.local` -- if no credentials are configured, you'll see a form to enter your Client ID and Client Secret directly in the browser.
 
-8. Reboot: `sudo reboot`
+   **Option B: Via SSH**
+   ```bash
+   ssh mega@mega.local
+   cat > ~/megavox2000/app/oauth_config.json << 'EOF'
+   {
+       "client_id": "YOUR_CLIENT_ID_HERE",
+       "client_secret": "YOUR_CLIENT_SECRET_HERE"
+   }
+   EOF
+   chmod 600 ~/megavox2000/app/oauth_config.json
+   systemctl --user restart megavox2000
+   ```
+
+**Updating credentials:** If your client secret changes, you can update it anytime from the web UI -- no SSH required. The sign-in screen will show the credential form if the current credentials are invalid.
 
 **Note:** If your Google Cloud project's OAuth consent screen is in "Testing" mode, you must add each user's Google account as a test user in the console. For broader distribution, submit for verification to switch to "Production" mode.
 
@@ -106,7 +117,8 @@ chmod 600 ~/megavox2000/app/oauth_config.json
 | Can't find MegaVox2000-Setup Wi-Fi | Wait 30 seconds after power-on for the hotspot to start |
 | Windows asks for WPS PIN | Forget the network, reconnect with password `mega2000` |
 | No sound | Check volume in web UI; verify audio output with `aplay -l` |
-| "OAuth not configured" | Create `oauth_config.json` -- see setup instructions above |
+| "OAuth not configured" | Enter credentials in the web UI form, or create `oauth_config.json` via SSH |
+| Sign-in spins forever | Credentials may be invalid -- the UI will show the error and a form to update them |
 | Page won't load | Try `http://mega.local:5000` or find the Pi's IP with `ping mega.local` |
 | Playback stutters | Check Wi-Fi signal strength; try a wired Ethernet connection |
 
