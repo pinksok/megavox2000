@@ -29,6 +29,19 @@ case "$1" in
         fi
 
         if [ -z "$ACTIVE_WIFI" ]; then
+            # Give a saved connection more time to auto-connect before giving up.
+            # On a Pi 3 after a rough reboot, association can take >13s; if we start
+            # the hotspot too eagerly, WiFi may auto-connect moments later, leaving
+            # BOTH a real client link AND mode=ap stuck in the file (setup-loop bug).
+            echo "Still no Wi-Fi. Waiting up to 20s more for a saved connection..."
+            for i in $(seq 1 10); do
+                sleep 2
+                ACTIVE_WIFI=$(nmcli -t -f TYPE,STATE connection show --active 2>/dev/null | grep "802-11-wireless:activated")
+                [ -n "$ACTIVE_WIFI" ] && break
+            done
+        fi
+
+        if [ -z "$ACTIVE_WIFI" ]; then
             # Still no wifi - start AP mode for setup
             echo "No Wi-Fi connection. Starting setup hotspot..."
             # Clean up any previous hotspot connection

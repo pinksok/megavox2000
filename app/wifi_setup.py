@@ -20,13 +20,38 @@ _connection_state = {"status": "idle", "error": "", "ssid": "", "ip": ""}
 _connection_lock = threading.Lock()
 
 
+def _wlan0_has_real_connection():
+    """True if wlan0 is joined to a normal (non-hotspot) Wi-Fi network."""
+    stdout, _, rc = _nmcli("-t", "-f", "NAME,TYPE,DEVICE",
+                           "connection", "show", "--active")
+    if rc != 0:
+        return False
+    for line in stdout.splitlines():
+        parts = line.split(":")
+        if len(parts) >= 3 and parts[2] == "wlan0" \
+                and parts[1] == "802-11-wireless" and parts[0] != HOTSPOT_CON_NAME:
+            return True
+    return False
+
+
 def get_mode():
-    """Read current mode from state file."""
+    """Read current mode from state file.
+
+    Self-heals the setup-loop bug: if the file says "ap" but wlan0 is actually
+    joined to a real network (e.g. boot script started the hotspot, then a saved
+    connection auto-connected moments later), correct the file to "client" so the
+    UI stops looping on the setup page.
+    """
     try:
         with open(SETUP_MODE_FILE) as f:
-            return f.read().strip()
+            mode = f.read().strip()
     except FileNotFoundError:
         return "client"
+
+    if mode == "ap" and _wlan0_has_real_connection():
+        _write_mode("client")
+        return "client"
+    return mode
 
 
 def is_setup_mode():

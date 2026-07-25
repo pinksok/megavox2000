@@ -142,6 +142,15 @@ sed -e "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" \
 mkdir -p /etc/NetworkManager/dnsmasq-shared.d
 cp "$SCRIPT_DIR/system/captive-portal.conf" /etc/NetworkManager/dnsmasq-shared.d/
 
+# Disable Wi-Fi power-save. On the Pi 3 the brcmfmac driver parks the radio when
+# idle, causing latency spikes and intermittent mDNS failures between tracks on
+# this always-on player. 2 = disable in NetworkManager's enum.
+mkdir -p /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/wifi-powersave-off.conf << 'PSCONF'
+[connection]
+wifi.powersave = 2
+PSCONF
+
 systemctl daemon-reload
 systemctl enable megavox-setup.service
 echo "  Done."
