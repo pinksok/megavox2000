@@ -131,11 +131,17 @@ echo "[7/8] Installing boot service..."
 
 # Copy boot script and set the user
 cp "$SCRIPT_DIR/system/megavox-boot.sh" "$INSTALL_DIR/megavox-boot.sh"
+# Strip CRLF line endings. If the repo was cloned/edited on Windows the script
+# can carry \r, which makes the kernel read the shebang as "/bin/bash\r" and the
+# boot service dies with status=203/EXEC ("No such file or directory") on every
+# boot -- so the iptables 80->5000 redirect never installs and http://mega.local
+# is unreachable while music still plays.
+sed -i 's/\r$//' "$INSTALL_DIR/megavox-boot.sh"
 chmod +x "$INSTALL_DIR/megavox-boot.sh"
 sed -i "s|^APP_USER=.*|APP_USER=\"$REAL_USER\"|" "$INSTALL_DIR/megavox-boot.sh"
 
-# Generate system service with correct paths
-sed -e "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" \
+# Generate system service with correct paths (strip any CRLF from the template)
+sed -e "s|INSTALL_DIR_PLACEHOLDER|$INSTALL_DIR|g" -e 's/\r$//' \
     "$SCRIPT_DIR/system/megavox-setup.service" > /etc/systemd/system/megavox-setup.service
 
 # Captive portal DNS config for AP mode
