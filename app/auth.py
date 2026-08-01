@@ -8,6 +8,7 @@ import qrcode
 import qrcode.image.svg
 from flask import Blueprint, jsonify, request, send_file
 
+import config
 import state
 from services import get_service
 
@@ -65,6 +66,49 @@ def auth_config():
 
     # Clear any stale auth state
     state.auth_pending = None
+
+    return jsonify({"success": True})
+
+
+@auth_bp.route("/auth/cookies", methods=["POST"])
+def auth_cookies():
+    """Upload a browser-exported cookies.txt for yt-dlp (no SSH needed).
+
+    Accepts a multipart file field named "cookies". Validates it looks like a
+    Netscape cookie jar containing YouTube auth cookies before saving, so a
+    stray file can't silently replace a working one.
+    """
+    upload = request.files.get("cookies")
+    if upload is None or not upload.filename:
+        return jsonify({"error": "No cookies file uploaded."})
+
+    try:
+        raw = upload.read().decode("utf-8", errors="replace")
+    except Exception:
+        return jsonify({"error": "Could not read the uploaded file."})
+
+    # Sanity-check: Netscape header (or at least tab-separated cookie lines) and
+    # the presence of a real logged-in YouTube session cookie.
+    lower = raw.lower()
+    looks_netscape = ("# netscape http cookie file" in lower
+                      or any("\t" in ln and "youtube" in ln.lower()
+                             for ln in raw.splitlines()))
+    has_auth = any(c in raw for c in ("SAPISID", "__Secure-3PSID", "LOGIN_INFO"))
+    if not looks_netscape:
+        return jsonify({"error": "That doesn't look like a Netscape cookies.txt. "
+                                 "Export in Netscape format and try again."})
+    if not has_auth:
+        return jsonify({"error": "No YouTube login cookies found. Make sure you "
+                                 "were signed in to youtube.com when exporting."})
+
+    # Normalize line endings; yt-dlp is strict about the Netscape format.
+    normalized = raw.replace("\r\n", "\n").replace("\r", "\n")
+    fd = os.open(config.COOKIES_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(normalized)
+
+    # Clear the last error so the UI stops showing the stale "cookies expired".
+    state.last_error = ""
 
     return jsonify({"success": True})
 

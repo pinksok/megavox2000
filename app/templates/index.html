@@ -466,7 +466,13 @@
                 <input type="text" id="config-client-secret" placeholder="Client Secret" style="width:100%;box-sizing:border-box;background:#000;color:#6a9955;border:1px solid #4a6a4a;font-family:'Courier New',monospace;font-size:0.75rem;padding:6px;margin-bottom:8px;outline:none;" />
                 <button class="auth-btn" onclick="saveConfig()" style="width:100%;">Save & Sign In</button>
             </div>
+            <div id="auth-cookies-form" style="display:none;text-align:left;margin:10px 0;">
+                <p style="font-size:0.8rem;color:#7ac5cd;margin-bottom:8px;">Upload a YouTube cookies.txt (Netscape format) exported from a signed-in browser:</p>
+                <input type="file" id="config-cookies-file" accept=".txt,text/plain" style="width:100%;box-sizing:border-box;background:#000;color:#6a9955;border:1px solid #4a6a4a;font-family:'Courier New',monospace;font-size:0.75rem;padding:6px;margin-bottom:8px;outline:none;" />
+                <button class="auth-btn" onclick="saveCookies()" style="width:100%;">Upload Cookies</button>
+            </div>
             <button class="auth-btn" id="auth-btn" onclick="startAuth()">Sign In</button>
+            <a href="#" id="auth-cookies-link" onclick="showCookiesForm();return false;" style="display:block;color:#7ac5cd;font-size:0.75rem;margin-top:8px;">Update YouTube cookies</a>
             <a href="#" id="auth-config-link" onclick="showConfigForm();return false;" style="display:none;color:#7ac5cd;font-size:0.75rem;margin-top:8px;display:none;">Update Credentials</a>
             <button class="auth-btn" id="auth-back-btn" onclick="authGoBack()" style="display:none;margin-top:8px;background:linear-gradient(145deg,#4a4a4a,#3a3a3a);border-color:#5a5a5a;">Back</button>
         </div>
@@ -564,6 +570,7 @@
         var autoNextIndex = parseInt(localStorage.getItem('autoNextIndex'), 10);
         if (isNaN(autoNextIndex)) autoNextIndex = -1;
         var wasPlaying = false; // for detecting Playing→Idle transition
+        var cookiePromptShown = false; // guard so cookie-expiry form pops once per error
 
         // Progress tracking
         var progressElapsed = 0;
@@ -1162,9 +1169,19 @@
                 if (j.error) {
                     s.textContent = j.error;
                     s.classList.add('error');
+                    // Cookie expiry: pop the upload form (once per error) so the
+                    // user can refresh cookies from the browser without SSH.
+                    var elc = j.error.toLowerCase();
+                    if ((elc.includes('cookie') || elc.includes('not a bot')) && !cookiePromptShown) {
+                        cookiePromptShown = true;
+                        document.getElementById('auth-overlay').classList.add('active');
+                        showCookiesForm();
+                        document.getElementById('auth-msg').textContent = j.error;
+                    }
                 } else if (j.state) {
                     s.textContent = j.state;
                     s.classList.remove('error');
+                    cookiePromptShown = false;
                 }
                 if (j.paused !== undefined) {
                     isPaused = j.paused;
@@ -1449,6 +1466,38 @@
                 document.getElementById('auth-msg').textContent = 'Credentials saved. Starting sign-in...';
                 document.getElementById('auth-btn').style.display = '';
                 startAuth();
+            } catch(e) {
+                document.getElementById('auth-msg').textContent = 'Connection error. Try again.';
+            }
+        }
+
+        function showCookiesForm() {
+            document.getElementById('auth-cookies-form').style.display = 'block';
+            document.getElementById('auth-config-form').style.display = 'none';
+            document.getElementById('auth-code-display').style.display = 'none';
+            document.getElementById('auth-msg').textContent =
+                'Export cookies.txt from youtube.com (signed in) and upload it here.';
+        }
+
+        async function saveCookies() {
+            var fileInput = document.getElementById('config-cookies-file');
+            if (!fileInput.files || !fileInput.files.length) {
+                document.getElementById('auth-msg').textContent = 'Choose a cookies.txt file first.';
+                return;
+            }
+            var fd = new FormData();
+            fd.append('cookies', fileInput.files[0]);
+            document.getElementById('auth-msg').textContent = 'Uploading...';
+            try {
+                var r = await fetch('/auth/cookies', {method: 'POST', body: fd});
+                var j = await r.json();
+                if (j.error) {
+                    document.getElementById('auth-msg').textContent = 'Error: ' + j.error;
+                    return;
+                }
+                document.getElementById('auth-cookies-form').style.display = 'none';
+                document.getElementById('auth-msg').textContent =
+                    'Cookies updated. Playback should work now.';
             } catch(e) {
                 document.getElementById('auth-msg').textContent = 'Connection error. Try again.';
             }
