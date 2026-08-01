@@ -121,6 +121,37 @@ To use YouTube Music, you need Google OAuth credentials:
 | Sign-in spins forever | Credentials may be invalid -- the UI will show the error and a form to update them |
 | Page won't load | Try `http://mega.local:5000` or find the Pi's IP with `ping mega.local` |
 | Playback stutters | Check Wi-Fi signal strength; try a wired Ethernet connection |
+| "YouTube requires sign-in cookies" | Add a `cookies.txt` -- see [YouTube cookies](#youtube-cookies) |
+| "YouTube cookies expired" | Re-export `cookies.txt` -- see [YouTube cookies](#youtube-cookies) |
+| Track takes ~75s to start | Normal on a Pi 3 -- yt-dlp solves YouTube's JS challenge with QuickJS, which is slow on weak CPUs. It is resolving, not frozen. |
+
+## YouTube cookies
+
+YouTube now blocks anonymous downloads with a "Sign in to confirm you're not a
+bot" wall, so yt-dlp needs logged-in browser cookies to resolve audio. The app
+automatically uses `app/cookies.txt` when present (gitignored, device-specific).
+
+**Export the cookie file (on a laptop/desktop, not the Pi):**
+
+1. Install the browser extension **"Get cookies.txt LOCALLY"** (Chrome/Firefox).
+2. Sign in to **youtube.com** (a secondary/throwaway Google account is safest --
+   these cookies are password-equivalent). Play a video for a few seconds.
+3. Click the extension, export the current site in **Netscape** format. It saves
+   a `cookies.txt` (or `www.youtube.com_cookies.txt`).
+4. Copy it to the Pi and restart:
+   ```bash
+   scp cookies.txt mega:~/megavox2000/app/cookies.txt
+   ssh mega "systemctl --user restart megavox2000"
+   ```
+
+Cookies expire after days to weeks. When playback breaks with a "cookies
+expired" message in the UI, repeat steps 2-4.
+
+**Requirements (installed by `install.sh`):** the `quickjs` package (JS runtime
+for solving YouTube's challenge) and `yt-dlp[default]` (bundles the `yt-dlp-ejs`
+challenge-solver). Deno is *not* an option on a 32-bit Pi 3 (no armv7l build),
+and the Debian `nodejs` (v20) is older than yt-dlp's required v22 -- QuickJS is
+the working runtime here.
 
 ## Architecture
 

@@ -55,7 +55,12 @@ megavox2000/
 OAuth credentials are loaded from `app/oauth_config.json` (gitignored). For SD card images, credentials are baked in during image build but never committed to git.
 
 ### YouTube Data API v3 (not ytmusicapi)
-ytmusicapi's OAuth is broken (HTTP 400 on all calls). We bypass it entirely and call YouTube Data API v3 directly with `requests`. Search still uses ytmusicapi unauthenticated (no quota cost). yt-dlp handles audio URL resolution without auth.
+ytmusicapi's OAuth is broken (HTTP 400 on all calls). We bypass it entirely and call YouTube Data API v3 directly with `requests`. Search still uses ytmusicapi unauthenticated (no quota cost).
+
+### yt-dlp playback auth (NOT anonymous as of 2026)
+yt-dlp handles audio URL resolution. This is a SEPARATE auth path from the OAuth/Data API above -- OAuth tokens do NOT apply to yt-dlp. As of 2026 YouTube demands two things or playback fails:
+- **Cookies** (`app/cookies.txt`, browser-exported Netscape format, gitignored) to pass the "confirm you're not a bot" wall. `yt_dlp_base_args()` in `player.py` auto-appends `--cookies` when the file exists. Cookies expire (days-weeks); `_bot_check_message()` surfaces an "expired" message to the UI. See README "YouTube cookies" for the export routine.
+- **A JS challenge solver** for the "n challenge": `quickjs` apt package (runtime) + `yt-dlp[default]` pip (bundles `yt-dlp-ejs`). Runtime flag is `--js-runtimes quickjs`. Deno has no 32-bit ARM build (Pi 3 is armv7l); Debian `nodejs` is v20 < yt-dlp's required v22 -- QuickJS is the only working runtime on a Pi 3. Resolution takes ~75s on a Pi 3, so `resolve_url()` uses a 90s timeout.
 
 ### BASE_DIR-relative paths
 All runtime files (history.json, volume.json, service.json, oauth.json) are stored relative to the app directory using `os.path.dirname(os.path.abspath(__file__))`. No hardcoded home directory paths.
@@ -191,10 +196,10 @@ luma.lcd Pillow
 ```bash
 # System packages:
 python3-flask python3-dbus python3-gi python3-requests ffmpeg
-pipewire pipewire-pulse wireplumber nodejs
+pipewire pipewire-pulse wireplumber nodejs quickjs
 
 # pip packages:
-yt-dlp qrcode ytmusicapi
+yt-dlp[default] qrcode ytmusicapi   # [default] pulls in yt-dlp-ejs (JS challenge solver)
 
 # Dev branch only (Bluetooth):
 bluetooth bluez-tools

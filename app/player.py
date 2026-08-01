@@ -12,8 +12,27 @@ from history import log_to_history
 
 
 def yt_dlp_base_args():
-    """Return common yt-dlp args for audio URL resolution."""
-    return ["yt-dlp", "--js-runtimes", "node"]
+    """Return common yt-dlp args for audio URL resolution.
+
+    If a cookies.txt exists next to the app, pass it so YouTube's
+    "confirm you're not a bot" check is satisfied with logged-in cookies.
+    """
+    args = ["yt-dlp", "--js-runtimes", "quickjs"]
+    if os.path.exists(config.COOKIES_FILE):
+        args += ["--cookies", config.COOKIES_FILE]
+    return args
+
+
+def _bot_check_message(stderr):
+    """If yt-dlp stderr is YouTube's anti-bot block, return a clear,
+    actionable message. Returns None if this isn't a bot-check error."""
+    if not stderr or "confirm you" not in stderr.lower():
+        return None
+    if os.path.exists(config.COOKIES_FILE):
+        return ("YouTube cookies expired -- re-export cookies.txt and copy it "
+                "to the app folder, then restart MegaVox.")
+    return ("YouTube requires sign-in cookies. Add a cookies.txt to the app "
+            "folder (see README) to play this track.")
 
 
 def _parse_duration(s):
@@ -54,7 +73,7 @@ def _check_is_live(url):
             ],
             capture_output=True,
             text=True,
-            timeout=15,
+            timeout=30,
         )
         if result.returncode == 0:
             return result.stdout.strip().lower() == "true"
@@ -78,7 +97,7 @@ def resolve_url(url):
             ],
             capture_output=True,
             text=True,
-            timeout=45,
+            timeout=90,
         )
         if result.returncode != 0:
             result = subprocess.run(
@@ -92,10 +111,13 @@ def resolve_url(url):
                 ],
                 capture_output=True,
                 text=True,
-                timeout=45,
+                timeout=90,
             )
         if result.returncode != 0:
             err = result.stderr.strip()
+            bot_msg = _bot_check_message(err)
+            if bot_msg:
+                return None, None, None, bot_msg, 0, False
             for line in err.splitlines():
                 if "ERROR" in line:
                     return None, None, None, line.split("ERROR: ", 1)[-1], 0, False

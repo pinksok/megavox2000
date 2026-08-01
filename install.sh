@@ -48,6 +48,7 @@ apt-get install -y -qq \
     bluez-tools \
     iptables \
     nodejs \
+    quickjs \
     network-manager \
     2>/dev/null
 
@@ -55,7 +56,11 @@ echo "  Done."
 
 # --- Step 2: pip packages ---
 echo "[2/8] Installing Python packages..."
-pip3 install --break-system-packages yt-dlp qrcode ytmusicapi 2>/dev/null
+# yt-dlp[default] pulls in yt-dlp-ejs, the challenge-solver script distribution
+# YouTube now requires ("n challenge"). Paired with the quickjs runtime above,
+# this lets yt-dlp resolve audio URLs. Without it, only image formats resolve
+# and playback fails with "Requested format is not available".
+pip3 install --break-system-packages "yt-dlp[default]" qrcode ytmusicapi 2>/dev/null
 echo "  Done."
 
 # --- Step 3: Copy application files ---
@@ -91,6 +96,20 @@ else
     echo "  with contents:"
     echo '    {"client_id": "YOUR_ID", "client_secret": "YOUR_SECRET"}'
     echo "  See README.md for Google Cloud Project setup instructions."
+    echo ""
+fi
+
+# --- Step 4b: YouTube cookies check ---
+# yt-dlp now hits YouTube's "confirm you're not a bot" wall without logged-in
+# cookies. app/player.py auto-uses app/cookies.txt if present. This file is
+# device-specific (exported from a browser) and is never shipped -- warn if absent.
+if [ ! -f "$INSTALL_DIR/app/cookies.txt" ]; then
+    echo ""
+    echo "  *** YouTube cookies not found ***"
+    echo "  Playback needs a browser-exported cookies.txt (Netscape format)."
+    echo "  Export youtube.com cookies (logged in) and copy to:"
+    echo "    $INSTALL_DIR/app/cookies.txt"
+    echo "  See README.md 'YouTube cookies' for the export steps."
     echo ""
 fi
 
