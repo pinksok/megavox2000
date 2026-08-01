@@ -138,14 +138,18 @@ automatically uses `app/cookies.txt` when present (gitignored, device-specific).
    these cookies are password-equivalent). Play a video for a few seconds.
 3. Click the extension, export the current site in **Netscape** format. It saves
    a `cookies.txt` (or `www.youtube.com_cookies.txt`).
-4. Copy it to the Pi and restart:
-   ```bash
-   scp cookies.txt mega:~/megavox2000/app/cookies.txt
-   ssh mega "systemctl --user restart megavox2000"
-   ```
+4. Install it, either way:
+   - **From the web UI (easiest, works from a phone):** open `http://mega.local`,
+     click **"Update YouTube cookies"**, pick the file, and upload. No SSH needed.
+   - **Via SSH:**
+     ```bash
+     scp cookies.txt mega:~/megavox2000/app/cookies.txt
+     ssh mega "systemctl --user restart megavox2000"
+     ```
 
-Cookies expire after days to weeks. When playback breaks with a "cookies
-expired" message in the UI, repeat steps 2-4.
+Cookies expire after days to weeks. When they do, the UI automatically pops the
+upload form with a "cookies expired" message -- just re-export (steps 2-3) and
+upload.
 
 **Requirements (installed by `install.sh`):** the `quickjs` package (JS runtime
 for solving YouTube's challenge) and `yt-dlp[default]` (bundles the `yt-dlp-ejs`
