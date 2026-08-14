@@ -93,13 +93,29 @@ def auth_cookies():
     looks_netscape = ("# netscape http cookie file" in lower
                       or any("\t" in ln and "youtube" in ln.lower()
                              for ln in raw.splitlines()))
-    has_auth = any(c in raw for c in ("SAPISID", "__Secure-3PSID", "LOGIN_INFO"))
+    # A signed-out visitor session still carries __Secure-3PSID, so that cookie
+    # alone is not proof of a login -- and an anonymous jar gets throttled to
+    # ~1MB per track by YouTube's SABR limits. Require a cookie that only a
+    # real logged-in session has.
+    cookie_names = set()
+    for ln in raw.splitlines():
+        if ln.startswith("#") or "\t" not in ln:
+            continue
+        fields = ln.split("\t")
+        if len(fields) >= 6:
+            cookie_names.add(fields[5].strip())
+    # Only the first-party cookies prove a login; the __Secure-3P* variants are
+    # present in signed-out visitor sessions too.
+    has_auth = bool(cookie_names & {"SAPISID", "SID", "HSID", "SSID",
+                                    "APISID", "LOGIN_INFO"})
     if not looks_netscape:
         return jsonify({"error": "That doesn't look like a Netscape cookies.txt. "
                                  "Export in Netscape format and try again."})
     if not has_auth:
-        return jsonify({"error": "No YouTube login cookies found. Make sure you "
-                                 "were signed in to youtube.com when exporting."})
+        return jsonify({"error": "These are signed-out cookies -- YouTube will "
+                                 "only send about the first minute of each track. "
+                                 "Sign in to youtube.com, confirm your avatar is "
+                                 "in the top-right, then export again."})
 
     # Normalize line endings; yt-dlp is strict about the Netscape format.
     normalized = raw.replace("\r\n", "\n").replace("\r", "\n")
