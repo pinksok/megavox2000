@@ -1076,6 +1076,24 @@
         }
         initAfterAuth();
 
+        var preresolvedForId = null;
+        function preresolveNext() {
+            // Ask the backend to resolve the upcoming track's audio URL now,
+            // so auto-next / skip starts instantly instead of taking ~20s.
+            if (!autoNextEnabled || !autoNextSource || autoNextIndex < 0) return;
+            var curId = localStorage.getItem('lastPlayingId');
+            if (preresolvedForId === curId) return; // once per playing track
+            var nextIdx = autoNextIndex + 1;
+            var tracks = (autoNextSource === 'playlist') ? currentPlaylistTracks : tabData[autoNextSource];
+            if (!tracks || nextIdx >= tracks.length) return;
+            preresolvedForId = curId;
+            fetch('/preresolve', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: tracks[nextIdx].id})
+            }).catch(function() {});
+        }
+
         function autoPlayNext() {
             if (!autoNextEnabled || !autoNextSource || autoNextIndex < 0) return;
             var nextIdx = autoNextIndex + 1;
@@ -1200,6 +1218,9 @@
                 }
                 // Track whether something is actively playing
                 isPlaying = nowPlaying;
+                // Current track is up and resolving is done -- good time to
+                // pre-resolve the next track in the background.
+                if (j.state === 'Playing' && !j.is_live) preresolveNext();
                 vizActive = (j.state === 'Playing');
                 vizScanning = isLoading;
                 updatePlayPauseBtn();

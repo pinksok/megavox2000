@@ -145,6 +145,57 @@ def resolve_url(url):
         return None, None, None, str(e), 0, False
 
 
+# Resolved googlevideo URLs are valid for ~6h and tied to this device's IP;
+# 2h leaves a wide safety margin for the lookahead cache.
+PRERESOLVE_TTL = 2 * 3600
+
+
+def preresolve(url):
+    """Resolve a URL in the background and cache the result so a future
+    start_playback(url) can skip the ~20s yt-dlp resolution.
+
+    Safe to call speculatively: errors and live streams are simply not
+    cached, and a cache miss just means the normal resolve path runs.
+    """
+    now = time.time()
+    with state.preresolve_lock:
+        entry = state.preresolve_cache.get(url)
+        if entry and now - entry["resolved_at"] < PRERESOLVE_TTL:
+            return
+        if url in state.preresolve_inflight:
+            return
+        state.preresolve_inflight.add(url)
+    try:
+        audio_url, title, thumbnail, error, duration, is_live = resolve_url(url)
+        if not error and audio_url and not is_live:
+            with state.preresolve_lock:
+                # Next-track lookahead, not a library -- keep the cache tiny
+                if len(state.preresolve_cache) >= 3:
+                    oldest = min(state.preresolve_cache,
+                                 key=lambda k: state.preresolve_cache[k]["resolved_at"])
+                    del state.preresolve_cache[oldest]
+                state.preresolve_cache[url] = {
+                    "audio_url": audio_url,
+                    "title": title,
+                    "thumbnail": thumbnail,
+                    "duration": duration,
+                    "resolved_at": time.time(),
+                }
+    finally:
+        with state.preresolve_lock:
+            state.preresolve_inflight.discard(url)
+
+
+def _pop_preresolved(url):
+    """Take a fresh pre-resolved entry for url, or None. One-shot: popping
+    means a URL that turns out dead is never served twice."""
+    with state.preresolve_lock:
+        entry = state.preresolve_cache.pop(url, None)
+    if entry and time.time() - entry["resolved_at"] < PRERESOLVE_TTL:
+        return entry
+    return None
+
+
 def fetch_playlist(playlist_url, offset=0, limit=20):
     """Fetch tracks from a YouTube playlist/feed with thumbnails."""
     start = offset + 1
@@ -280,7 +331,16 @@ def start_playback(url):
     with state.player_lock:
         my_generation = state.play_generation
 
-    audio_url, title, thumbnail, error, duration, is_live = resolve_url(url)
+    cached = _pop_preresolved(url)
+    if cached:
+        audio_url = cached["audio_url"]
+        title = cached["title"]
+        thumbnail = cached["thumbnail"]
+        duration = cached["duration"]
+        error = None
+        is_live = False
+    else:
+        audio_url, title, thumbnail, error, duration, is_live = resolve_url(url)
 
     with state.player_lock:
         if state.play_generation != my_generation:

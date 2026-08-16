@@ -25,3 +25,9 @@ live_feeder = None
 
 # Lock for player state mutations (play_generation, player_process, paused, loading)
 player_lock = threading.Lock()
+
+# Next-track lookahead: url -> resolved metadata dict, so start_playback can
+# skip the ~20s yt-dlp resolution when the frontend pre-resolved the track.
+preresolve_cache = {}
+preresolve_inflight = set()
+preresolve_lock = threading.Lock()

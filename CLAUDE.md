@@ -62,6 +62,15 @@ yt-dlp handles audio URL resolution. This is a SEPARATE auth path from the OAuth
 - **Cookies** (`app/cookies.txt`, browser-exported Netscape format, gitignored) to pass the "confirm you're not a bot" wall. `yt_dlp_base_args()` in `player.py` auto-appends `--cookies` when the file exists. Cookies expire (days-weeks); `_bot_check_message()` surfaces an "expired" message to the UI. See README "YouTube cookies" for the export routine.
 - **A JS challenge solver** for the "n challenge": a JS runtime + `yt-dlp[default]` pip (bundles `yt-dlp-ejs`). Primary runtime is **Node v22** (armv6l build from unofficial-builds.nodejs.org installed to `/opt`, symlinked at `/usr/local/bin/node` -- Debian's apt `nodejs` is v20, below yt-dlp's required v22, and Deno has no 32-bit ARM build). V8's JIT solves the challenge in ~2s vs ~60s interpreted by QuickJS, cutting track resolution from ~75-90s to ~18-20s on a Pi 3. The `quickjs` apt package stays installed as a fallback runtime. Runtime flags: `--js-runtimes node --js-runtimes quickjs` (see `yt_dlp_base_args()`). `resolve_url()` keeps a 90s timeout so the QuickJS fallback path still fits.
 
+### Next-track pre-resolve (instant auto-next/skip)
+While a track plays, the frontend POSTs `/preresolve {id}` for the upcoming queue
+track (once per playing track, from the status poll). The backend resolves it in
+the background and caches the result in `state.preresolve_cache` (keyed by URL,
+max 3 entries, 2h TTL -- googlevideo URLs live ~6h). `start_playback()` checks
+the cache first; a hit starts playback in ~300ms instead of ~20s. Entries are
+popped on use so a dead URL is never served twice, and every miss/failure falls
+through to the normal resolve path. Live streams are never cached.
+
 ### BASE_DIR-relative paths
 All runtime files (history.json, volume.json, service.json, oauth.json) are stored relative to the app directory using `os.path.dirname(os.path.abspath(__file__))`. No hardcoded home directory paths.
 

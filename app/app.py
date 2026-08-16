@@ -14,7 +14,7 @@ import service_youtube
 import service_spotify
 import service_pandora
 import json
-from player import stop_player, start_playback, toggle_pause_internal, seek_to, _pulse_env
+from player import stop_player, start_playback, toggle_pause_internal, seek_to, _pulse_env, preresolve
 from auth import auth_bp
 from library import library_bp
 from config import VOLUME_FILE, DEFAULT_VOLUME
@@ -98,6 +98,24 @@ def play():
     t.start()
 
     return jsonify({"status": "ACQUIRING SIGNAL...", "title": data.get("title", url), "thumbnail": ""})
+
+
+@app.route("/preresolve", methods=["POST"])
+def preresolve_route():
+    """Speculatively resolve the likely-next track in the background so a
+    later /play of the same track starts instantly."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid request"}), 400
+    url = data.get("url", "")
+    if not url and data.get("id"):
+        svc = services.get_service()
+        if svc:
+            url = svc.build_url(data["id"])
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+    threading.Thread(target=preresolve, args=(url,), daemon=True).start()
+    return jsonify({"status": "ok"})
 
 
 @app.route("/pause", methods=["POST"])
