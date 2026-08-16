@@ -17,7 +17,9 @@ def yt_dlp_base_args():
     If a cookies.txt exists next to the app, pass it so YouTube's
     "confirm you're not a bot" check is satisfied with logged-in cookies.
     """
-    args = ["yt-dlp", "--js-runtimes", "quickjs"]
+    # Prefer node (V8 JIT solves the JS challenge in ~2s vs ~60s interpreted
+    # by quickjs on a Pi 3); quickjs stays enabled as a fallback runtime.
+    args = ["yt-dlp", "--js-runtimes", "node", "--js-runtimes", "quickjs"]
     if os.path.exists(config.COOKIES_FILE):
         args += ["--cookies", config.COOKIES_FILE]
     return args

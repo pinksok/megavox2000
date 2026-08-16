@@ -63,6 +63,26 @@ echo "[2/8] Installing Python packages..."
 pip3 install --break-system-packages "yt-dlp[default]" qrcode ytmusicapi 2>/dev/null
 echo "  Done."
 
+# --- Step 2b: Node.js 22 (fast JS challenge runtime) ---
+# yt-dlp needs a JS runtime to solve YouTube's "n challenge". quickjs works but
+# interprets the challenge in ~60-80s per track on a Pi 3; Node's V8 JIT does it
+# in seconds. Debian ships Node 20 (< yt-dlp's required 22), so install the
+# official-source armv6l build from unofficial-builds.nodejs.org (runs on armv7).
+NODE_VERSION="v22.23.2"
+if ! /usr/local/bin/node --version 2>/dev/null | grep -q "^v2[2-9]"; then
+    echo "[2b/8] Installing Node.js $NODE_VERSION (fast yt-dlp challenge solver)..."
+    NODE_TAR="node-$NODE_VERSION-linux-armv6l.tar.xz"
+    if curl -fsSLo "/tmp/$NODE_TAR" \
+        "https://unofficial-builds.nodejs.org/download/release/$NODE_VERSION/$NODE_TAR"; then
+        tar -xJf "/tmp/$NODE_TAR" -C /opt
+        ln -sf "/opt/node-$NODE_VERSION-linux-armv6l/bin/node" /usr/local/bin/node
+        rm -f "/tmp/$NODE_TAR"
+        echo "  Done ($(/usr/local/bin/node --version))."
+    else
+        echo "  WARNING: Node download failed -- playback will fall back to quickjs (slow)."
+    fi
+fi
+
 # --- Step 3: Copy application files ---
 echo "[3/8] Installing application files..."
 if [ "$SCRIPT_DIR" = "$INSTALL_DIR" ]; then

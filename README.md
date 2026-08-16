@@ -123,7 +123,8 @@ To use YouTube Music, you need Google OAuth credentials:
 | Playback stutters | Check Wi-Fi signal strength; try a wired Ethernet connection |
 | "YouTube requires sign-in cookies" | Add a `cookies.txt` -- see [YouTube cookies](#youtube-cookies) |
 | "YouTube cookies expired" | Re-export `cookies.txt` -- see [YouTube cookies](#youtube-cookies) |
-| Track takes ~75s to start | Normal on a Pi 3 -- yt-dlp solves YouTube's JS challenge with QuickJS, which is slow on weak CPUs. It is resolving, not frozen. |
+| Track takes ~20s to start | Normal on a Pi 3 -- yt-dlp solves YouTube's JS challenge before playback. It is resolving, not frozen. |
+| Track takes ~75s+ to start | Node.js 22 is missing, so yt-dlp fell back to the slow QuickJS solver. Check `node --version` reports v22+; re-run `install.sh` to install it. |
 
 ## YouTube cookies
 
@@ -151,11 +152,13 @@ Cookies expire after days to weeks. When they do, the UI automatically pops the
 upload form with a "cookies expired" message -- just re-export (steps 2-3) and
 upload.
 
-**Requirements (installed by `install.sh`):** the `quickjs` package (JS runtime
-for solving YouTube's challenge) and `yt-dlp[default]` (bundles the `yt-dlp-ejs`
-challenge-solver). Deno is *not* an option on a 32-bit Pi 3 (no armv7l build),
-and the Debian `nodejs` (v20) is older than yt-dlp's required v22 -- QuickJS is
-the working runtime here.
+**Requirements (installed by `install.sh`):** a JS runtime for solving YouTube's
+challenge plus `yt-dlp[default]` (bundles the `yt-dlp-ejs` challenge-solver).
+The installer fetches **Node.js v22** (official-source armv6l build from
+unofficial-builds.nodejs.org, installed under `/opt`) because its JIT solves the
+challenge in seconds; the `quickjs` package is kept as a slow fallback (~60s per
+track). Deno is *not* an option on a 32-bit Pi 3 (no armv7l build), and Debian's
+apt `nodejs` (v20) is older than yt-dlp's required v22.
 
 ## Architecture
 
