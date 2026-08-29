@@ -20,6 +20,11 @@ def yt_dlp_base_args():
     # Prefer node (V8 JIT solves the JS challenge in ~2s vs ~60s interpreted
     # by quickjs on a Pi 3); quickjs stays enabled as a fallback runtime.
     args = ["yt-dlp", "--js-runtimes", "node", "--js-runtimes", "quickjs"]
+    # Force the web_safari player client. yt-dlp's default pick here is
+    # android_vr, whose media URLs now 403 on the actual byte fetch -- the
+    # URL resolves fine, then ffplay (and yt-dlp's own downloader) get
+    # "403 Forbidden" at byte 0. web_safari URLs stream normally.
+    args += ["--extractor-args", "youtube:player_client=web_safari"]
     if os.path.exists(config.COOKIES_FILE):
         args += ["--cookies", config.COOKIES_FILE]
     return args
@@ -310,19 +315,38 @@ def watch_player(proc, generation):
         if state.play_generation != generation:
             return
         state.loading = False
-        if proc.returncode not in (0, -9, -15):
-            try:
-                with open(config.LOG_FILE, "r") as f:
-                    log_content = f.read()
-                if log_content.strip():
-                    for line in reversed(log_content.strip().splitlines()):
-                        line = line.strip()
-                        if line and "M-A:" not in line:
-                            state.last_error = line[:200]
-                            break
-                else:
-                    state.last_error = "Playback failed (exit code {})".format(proc.returncode)
-            except Exception:
+
+        # ffplay exits 0 when the HTTP fetch is rejected outright (it opens no
+        # stream and quits cleanly), so a clean exit is not proof of success.
+        # Always scan the log for a hard fetch error, whatever the exit code.
+        log_content = ""
+        try:
+            with open(config.LOG_FILE, "r") as f:
+                log_content = f.read()
+        except Exception:
+            pass
+
+        fetch_error = None
+        for line in log_content.splitlines():
+            if "403 Forbidden" in line:
+                fetch_error = (
+                    "YouTube refused the audio stream (403). The media URL "
+                    "expired or was rejected -- try the track again."
+                )
+                break
+            if "Server returned" in line or "Error opening input" in line:
+                fetch_error = line.strip()[:200]
+                break
+
+        if fetch_error:
+            state.last_error = fetch_error
+        elif proc.returncode not in (0, -9, -15):
+            for line in reversed(log_content.strip().splitlines()):
+                line = line.strip()
+                if line and "M-A:" not in line:
+                    state.last_error = line[:200]
+                    break
+            else:
                 state.last_error = "Playback failed (exit code {})".format(proc.returncode)
 
 
