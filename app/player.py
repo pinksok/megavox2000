@@ -11,6 +11,25 @@ import state
 from history import log_to_history
 
 
+# YouTube player clients to try, in order. yt-dlp walks this list and uses the
+# first that yields a usable format, so one client having a bad day no longer
+# takes playback down.
+#
+# Do NOT let this fall back to yt-dlp's own default pick: that chooses
+# android_vr, whose URLs resolve fine but 403 at byte 0 on the real media fetch
+# (yt-dlp's own downloader fails too, so it is not a player-flag problem).
+#
+# Verified by actually downloading bytes -- resolution succeeding does NOT mean
+# the audio is fetchable, so test with --download-sections, not -g:
+#   mweb        both test tracks OK
+#   android     both test tracks OK
+#   web_safari  intermittent -- storyboard-only on some tracks
+#   web         fails on some tracks ("Requested format is not available")
+#   tv_embedded resolves but download fails
+#   ios         no audio formats at all
+YOUTUBE_PLAYER_CLIENTS = "mweb,android,web_safari,web"
+
+
 def yt_dlp_base_args():
     """Return common yt-dlp args for audio URL resolution.
 
@@ -20,11 +39,8 @@ def yt_dlp_base_args():
     # Prefer node (V8 JIT solves the JS challenge in ~2s vs ~60s interpreted
     # by quickjs on a Pi 3); quickjs stays enabled as a fallback runtime.
     args = ["yt-dlp", "--js-runtimes", "node", "--js-runtimes", "quickjs"]
-    # Force the web_safari player client. yt-dlp's default pick here is
-    # android_vr, whose media URLs now 403 on the actual byte fetch -- the
-    # URL resolves fine, then ffplay (and yt-dlp's own downloader) get
-    # "403 Forbidden" at byte 0. web_safari URLs stream normally.
-    args += ["--extractor-args", "youtube:player_client=web_safari"]
+    args += ["--extractor-args",
+             "youtube:player_client=" + YOUTUBE_PLAYER_CLIENTS]
     if os.path.exists(config.COOKIES_FILE):
         args += ["--cookies", config.COOKIES_FILE]
     return args
