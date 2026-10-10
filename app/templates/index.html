@@ -1148,6 +1148,19 @@
         }
 
         async function skipPrev() {
+            // Standard player behaviour: if the current track is more than a few
+            // seconds in, "back" restarts it. Pressing back again near the start
+            // (or when nothing is playing) goes to the previous track.
+            if (isPlaying && !progressIsLive && progressElapsed > 3) {
+                progressElapsed = 0;
+                updateProgressUI();
+                fetch('/seek', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({position: 0})
+                });
+                return;
+            }
             var q = await _ensureSkipTracks();
             if (!q.tracks || q.tracks.length === 0) return;
             var cur = _findCurrentIdx(q.tracks);
