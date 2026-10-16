@@ -13,23 +13,25 @@ Headless music player for Raspberry Pi with web-based control interface. Branded
 - **`main`** -- Production branch. Targets Raspberry Pi 3. No Bluetooth UI. Ships on SD card images.
 - **`dev`** -- Development branch. Targets Raspberry Pi 5. Includes Bluetooth MPRIS and connect UI.
 
-## Units: mega is primary, others mirror it
+## Units: identical code, git lives on the PC
 
 Two units run identical code from `main`:
 
-| Unit | User | Role |
-|---|---|---|
-| **mega** (Pi 3, `~/megavox2000`) | `mega` | **Primary.** All changes are made here, committed and pushed (write deploy key `~/.ssh/id_ed25519_github`) |
-| **mega2** (garage boombox) | `pi` | Mirror. Never edit here. `megavox-update.timer` pulls `main` every 15 min |
+| Unit | SSH | User | Role |
+|---|---|---|---|
+| **mega** (Pi 3) | `ssh mega` | `mega` | Primary unit |
+| **mega2** (garage boombox) | `ssh mega2` | `pi` | Same code as mega |
 
-- Workflow: edit on mega -> test -> `git commit` -> `git push`. mega2 picks it up
-  within 15 min, but only while idle (nothing playing), then restarts its player
-  if `app/` changed. Force it now: `ssh mega2 'systemctl --user start megavox-update'`;
-  log: `journalctl --user -u megavox-update`.
-- `system/megavox-update.sh` refuses to update a unit with local edits (it logs
-  them instead), so a stray edit on a mirror never gets silently overwritten.
-- The installed `~/megavox2000/megavox-boot.sh` is per-device (template +
-  `APP_USER`, gitignored); the updater reinstalls it when the template changes.
+- Workflow: edit in the PC clone (`C:\Github\megavox2000`), commit and push
+  from the PC. Then pull on both units and restart the player:
+  `ssh mega 'cd ~/megavox2000 && git pull --ff-only && systemctl --user restart megavox2000'`
+  (same for `mega2`). Check nothing is playing first, the restart cuts it off.
+- Never edit on the Pis. They only pull (public repo over HTTPS, no
+  credentials on the Pis).
+- The installed `~/megavox2000/megavox-boot.sh` is per-device (root-owned copy
+  of `system/megavox-boot.sh` with `APP_USER` set, gitignored). When the
+  template changes, reinstall it on each unit:
+  `sudo cp system/megavox-boot.sh megavox-boot.sh && sudo sed -i "s|^APP_USER=.*|APP_USER=\"$USER\"|" megavox-boot.sh`
 - Per-device data stays per-device (gitignored): history, volume, OAuth tokens,
   `cookies.txt`.
 
@@ -60,8 +62,6 @@ megavox2000/
 │   ├── megavox2000.service      # User service template
 │   ├── megavox-setup.service    # System boot service template
 │   ├── megavox-boot.sh          # Boot script template
-│   ├── megavox-update.sh        # Mirror units: pull main when idle
-│   ├── megavox-update.service   # + .timer (every 15 min, user units)
 │   └── captive-portal.conf      # DNS hijack for AP mode
 ├── install.sh                   # Full setup script (runs on Pi)
 ├── prep-sd.sh                   # SD card prep from Windows (copies files, sets up firstrun)

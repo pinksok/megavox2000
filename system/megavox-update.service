@@ -1,8 +1,0 @@
-[Unit]
-Description=MegaVox 2000 - pull updates from GitHub main
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-Type=oneshot
-ExecStart=%h/megavox2000/system/megavox-update.sh
