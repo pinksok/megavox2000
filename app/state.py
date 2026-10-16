@@ -23,6 +23,15 @@ current_audio_url = ""
 is_live = False
 live_feeder = None
 
+# Auto-next queue. The frontend sends the list a track was picked from with
+# /play; when a track ends cleanly, watch_player() starts queue[queue_index + 1]
+# itself, so auto-next works with the phone's screen off / page asleep.
+queue = []            # [{"id": ..., "title": ...}, ...]
+queue_index = -1      # index of the current track in queue, -1 = no queue
+queue_source = None   # frontend list name ("history", "liked", "playlist", ...)
+auto_next = True
+current_track_id = ""
+
 # Lock for player state mutations (play_generation, player_process, paused, loading)
 player_lock = threading.Lock()
 

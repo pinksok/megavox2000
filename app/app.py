@@ -85,6 +85,22 @@ def play():
         return jsonify({"error": "No URL provided"})
 
     stop_player()
+    # Auto-next queue: the list this track was picked from (see state.py).
+    # A request without one (pasted URL) clears it.
+    queue = data.get("queue")
+    index = data.get("index")
+    if isinstance(queue, list) and isinstance(index, int) and 0 <= index < len(queue):
+        state.queue = [{"id": str(t.get("id", "")), "title": str(t.get("title", ""))}
+                       for t in queue if isinstance(t, dict) and t.get("id")]
+        state.queue_index = index if index < len(state.queue) else -1
+        state.queue_source = data.get("source")
+    else:
+        state.queue = []
+        state.queue_index = -1
+        state.queue_source = None
+    if "auto_next" in data:
+        state.auto_next = bool(data["auto_next"])
+    state.current_track_id = data.get("id", "")
     state.last_error = ""
     state.current_title = data.get("title", "")
     state.current_thumbnail = ""
@@ -216,7 +232,15 @@ def status():
         elapsed += time.time() - state.playback_start_time
     elapsed = min(int(elapsed), duration) if duration else int(elapsed)
 
-    return jsonify({"title": state.current_title, "thumbnail": state.current_thumbnail, "state": play_state, "paused": state.paused, "elapsed": elapsed, "duration": duration, "is_live": state.is_live})
+    return jsonify({"title": state.current_title, "thumbnail": state.current_thumbnail, "state": play_state, "paused": state.paused, "elapsed": elapsed, "duration": duration, "is_live": state.is_live,
+                    "track_id": state.current_track_id, "queue_index": state.queue_index, "queue_source": state.queue_source})
+
+
+@app.route("/autonext", methods=["POST"])
+def autonext_route():
+    data = request.get_json() or {}
+    state.auto_next = bool(data.get("enabled", True))
+    return jsonify({"auto_next": state.auto_next})
 
 
 @app.route("/wifi-signal")

@@ -13,6 +13,26 @@ Headless music player for Raspberry Pi with web-based control interface. Branded
 - **`main`** -- Production branch. Targets Raspberry Pi 3. No Bluetooth UI. Ships on SD card images.
 - **`dev`** -- Development branch. Targets Raspberry Pi 5. Includes Bluetooth MPRIS and connect UI.
 
+## Units: mega is primary, others mirror it
+
+Two units run identical code from `main`:
+
+| Unit | User | Role |
+|---|---|---|
+| **mega** (Pi 3, `~/megavox2000`) | `mega` | **Primary.** All changes are made here, committed and pushed (write deploy key `~/.ssh/id_ed25519_github`) |
+| **mega2** (garage boombox) | `pi` | Mirror. Never edit here. `megavox-update.timer` pulls `main` every 15 min |
+
+- Workflow: edit on mega -> test -> `git commit` -> `git push`. mega2 picks it up
+  within 15 min, but only while idle (nothing playing), then restarts its player
+  if `app/` changed. Force it now: `ssh mega2 'systemctl --user start megavox-update'`;
+  log: `journalctl --user -u megavox-update`.
+- `system/megavox-update.sh` refuses to update a unit with local edits (it logs
+  them instead), so a stray edit on a mirror never gets silently overwritten.
+- The installed `~/megavox2000/megavox-boot.sh` is per-device (template +
+  `APP_USER`, gitignored); the updater reinstalls it when the template changes.
+- Per-device data stays per-device (gitignored): history, volume, OAuth tokens,
+  `cookies.txt`.
+
 ## Repository Structure
 
 ```
@@ -40,6 +60,8 @@ megavox2000/
 │   ├── megavox2000.service      # User service template
 │   ├── megavox-setup.service    # System boot service template
 │   ├── megavox-boot.sh          # Boot script template
+│   ├── megavox-update.sh        # Mirror units: pull main when idle
+│   ├── megavox-update.service   # + .timer (every 15 min, user units)
 │   └── captive-portal.conf      # DNS hijack for AP mode
 ├── install.sh                   # Full setup script (runs on Pi)
 ├── prep-sd.sh                   # SD card prep from Windows (copies files, sets up firstrun)
@@ -62,14 +84,26 @@ yt-dlp handles audio URL resolution. This is a SEPARATE auth path from the OAuth
 - **Cookies** (`app/cookies.txt`, browser-exported Netscape format, gitignored) to pass the "confirm you're not a bot" wall. `yt_dlp_base_args()` in `player.py` auto-appends `--cookies` when the file exists. Cookies expire (days-weeks); `_bot_check_message()` surfaces an "expired" message to the UI. See README "YouTube cookies" for the export routine.
 - **A JS challenge solver** for the "n challenge": a JS runtime + `yt-dlp[default]` pip (bundles `yt-dlp-ejs`). Primary runtime is **Node v22** (armv6l build from unofficial-builds.nodejs.org installed to `/opt`, symlinked at `/usr/local/bin/node` -- Debian's apt `nodejs` is v20, below yt-dlp's required v22, and Deno has no 32-bit ARM build). V8's JIT solves the challenge in ~2s vs ~60s interpreted by QuickJS, cutting track resolution from ~75-90s to ~18-20s on a Pi 3. The `quickjs` apt package stays installed as a fallback runtime. Runtime flags: `--js-runtimes node --js-runtimes quickjs` (see `yt_dlp_base_args()`). `resolve_url()` keeps a 90s timeout so the QuickJS fallback path still fits.
 
+### Auto-next runs on the Pi, not in the browser
+The frontend used to drive auto-next by polling `/status` and POSTing the next
+`/play` when it saw Playing -> Idle. Phones throttle/suspend a locked or
+backgrounded page, so the song ended unseen and nothing played next. Now
+`/play` carries the list the track was picked from (`queue` [{id,title}],
+`index`, `source`, `auto_next`) and the Pi keeps it in `state.queue`.
+`watch_player()` starts `queue[queue_index + 1]` itself when ffplay exits 0 and
+it is still the current process (stop/seek/skip bump the generation or swap
+`player_process`, so they never trigger it). A `/play` without a queue (pasted
+URL) clears it. `/status` reports `track_id`/`queue_index`/`queue_source` so
+the page follows along; `/autonext {enabled}` mirrors the checkbox.
+
 ### Next-track pre-resolve (instant auto-next/skip)
-While a track plays, the frontend POSTs `/preresolve {id}` for the upcoming queue
-track (once per playing track, from the status poll). The backend resolves it in
+5s after a track starts, `_preresolve_next()` resolves the next queued track in
 the background and caches the result in `state.preresolve_cache` (keyed by URL,
 max 3 entries, 2h TTL -- googlevideo URLs live ~6h). `start_playback()` checks
 the cache first; a hit starts playback in ~300ms instead of ~20s. Entries are
 popped on use so a dead URL is never served twice, and every miss/failure falls
-through to the normal resolve path. Live streams are never cached.
+through to the normal resolve path. Live streams are never cached. The
+`/preresolve {id}` route still exists for manual use.
 
 ### BASE_DIR-relative paths
 All runtime files (history.json, volume.json, service.json, oauth.json) are stored relative to the app directory using `os.path.dirname(os.path.abspath(__file__))`. No hardcoded home directory paths.

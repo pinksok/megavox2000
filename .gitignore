@@ -38,3 +38,6 @@ ENV/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Installed boot script (per-device copy of system/megavox-boot.sh)
+/megavox-boot.sh

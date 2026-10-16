@@ -354,6 +354,7 @@ def watch_player(proc, generation):
                 fetch_error = line.strip()[:200]
                 break
 
+        next_index = -1
         if fetch_error:
             state.last_error = fetch_error
         elif proc.returncode not in (0, -9, -15):
@@ -364,6 +365,58 @@ def watch_player(proc, generation):
                     break
             else:
                 state.last_error = "Playback failed (exit code {})".format(proc.returncode)
+        elif (proc.returncode == 0 and state.player_process is proc
+              and not state.is_live and state.auto_next
+              and 0 <= state.queue_index < len(state.queue) - 1):
+            # Track ran to the end (-autoexit) -- not killed by stop/seek/skip,
+            # which either bump the generation or swap player_process.
+            next_index = state.queue_index + 1
+
+    if next_index >= 0:
+        play_queue_index(next_index, generation)
+
+
+def play_queue_index(index, expected_generation=None):
+    """Start queue[index] the way /play starts a track. With
+    expected_generation, do nothing if something else started playing since."""
+    from services import get_service
+    with state.player_lock:
+        if expected_generation is not None and state.play_generation != expected_generation:
+            return
+        if not 0 <= index < len(state.queue):
+            return
+        track = state.queue[index]
+    svc = get_service()
+    if not svc:
+        return
+    url = svc.build_url(track["id"])
+    stop_player()
+    with state.player_lock:
+        state.queue_index = index
+        state.current_track_id = track["id"]
+        state.last_error = ""
+        state.current_title = track.get("title", "")
+        state.current_thumbnail = ""
+        state.paused = False
+        state.loading = True
+    threading.Thread(target=start_playback, args=(url,), daemon=True).start()
+
+
+def _preresolve_next(generation):
+    """Pre-resolve the next queued track once the current one is under way,
+    so auto-next starts in ~300ms instead of ~20s."""
+    from services import get_service
+    time.sleep(5)  # let ffplay get going first -- yt-dlp is CPU-heavy on a Pi
+    with state.player_lock:
+        if state.play_generation != generation or not state.auto_next:
+            return
+        nxt = state.queue_index + 1
+        if not 0 < nxt < len(state.queue):
+            return
+        track_id = state.queue[nxt]["id"]
+    svc = get_service()
+    if svc:
+        preresolve(svc.build_url(track_id))
 
 
 def start_playback(url):
@@ -468,6 +521,9 @@ def start_playback(url):
 
     watcher = threading.Thread(target=watch_player, args=(proc, my_generation), daemon=True)
     watcher.start()
+
+    if not is_live:
+        threading.Thread(target=_preresolve_next, args=(my_generation,), daemon=True).start()
 
 
 def _kill_proc(proc, was_paused=False):

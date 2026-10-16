@@ -570,6 +570,7 @@
         var autoNextIndex = parseInt(localStorage.getItem('autoNextIndex'), 10);
         if (isNaN(autoNextIndex)) autoNextIndex = -1;
         var wasPlaying = false; // for detecting Playing→Idle transition
+        var lastPlayTrackAt = 0; // ignore stale /status track ids right after a local play
         var cookiePromptShown = false; // guard so cookie-expiry form pops once per error
 
         // Progress tracking
@@ -701,7 +702,19 @@
                 localStorage.setItem('autoNextIndex', index);
             }
             updatePlayPauseBtn();
-            api('/play', {id: id, title: title});
+            lastPlayTrackAt = Date.now();
+            // Send the list this track came from: the Pi plays the next one
+            // itself when the track ends, so auto-next works with the phone
+            // asleep. (Without a matching queue the Pi clears its queue.)
+            var payload = {id: id, title: title, auto_next: autoNextEnabled};
+            var qTracks = (autoNextSource === 'playlist') ? currentPlaylistTracks : tabData[autoNextSource];
+            if (autoNextSource && qTracks && autoNextIndex >= 0 &&
+                    autoNextIndex < qTracks.length && qTracks[autoNextIndex].id === id) {
+                payload.queue = qTracks.map(function(t) { return {id: t.id, title: t.title}; });
+                payload.index = autoNextIndex;
+                payload.source = autoNextSource;
+            }
+            api('/play', payload);
             // Refresh history after backend has time to resolve and log
             setTimeout(function() { loadTab('history'); }, 8000);
         }
@@ -709,6 +722,11 @@
         function toggleAutoNext(checked) {
             autoNextEnabled = checked;
             localStorage.setItem('autoNextEnabled', checked ? 'true' : 'false');
+            fetch('/autonext', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({enabled: checked})
+            }).catch(function() {});
         }
 
         var isPaused = false;
@@ -1076,45 +1094,6 @@
         }
         initAfterAuth();
 
-        var preresolvedForId = null;
-        function preresolveNext() {
-            // Ask the backend to resolve the upcoming track's audio URL now,
-            // so auto-next / skip starts instantly instead of taking ~20s.
-            if (!autoNextEnabled || !autoNextSource || autoNextIndex < 0) return;
-            var curId = localStorage.getItem('lastPlayingId');
-            if (preresolvedForId === curId) return; // once per playing track
-            var nextIdx = autoNextIndex + 1;
-            var tracks = (autoNextSource === 'playlist') ? currentPlaylistTracks : tabData[autoNextSource];
-            if (!tracks || nextIdx >= tracks.length) return;
-            preresolvedForId = curId;
-            fetch('/preresolve', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({id: tracks[nextIdx].id})
-            }).catch(function() {});
-        }
-
-        function autoPlayNext() {
-            if (!autoNextEnabled || !autoNextSource || autoNextIndex < 0) return;
-            var nextIdx = autoNextIndex + 1;
-            var tracks;
-            if (autoNextSource === 'playlist') {
-                tracks = currentPlaylistTracks;
-            } else {
-                tracks = tabData[autoNextSource];
-            }
-            if (tracks && nextIdx < tracks.length) {
-                var t = tracks[nextIdx];
-                playTrack(t.id, t.title, autoNextSource, nextIdx);
-            } else {
-                // End of list
-                autoNextSource = null;
-                autoNextIndex = -1;
-                localStorage.removeItem('autoNextSource');
-                localStorage.removeItem('autoNextIndex');
-            }
-        }
-
         function _findCurrentIdx(tracks) {
             var curId = localStorage.getItem('lastPlayingId');
             if (!curId || !tracks) return -1;
@@ -1218,12 +1197,26 @@
                     isPaused = j.paused;
                 }
                 refreshVolume();
-                // Detect Playing→Idle transition for auto-next (skip for live streams)
+                // Auto-next runs on the Pi (watch_player). When it has moved on
+                // to another track, follow it so skip/back and the queue
+                // position stay right.
+                if (j.track_id && j.track_id !== localStorage.getItem('lastPlayingId') &&
+                        Date.now() - lastPlayTrackAt > 5000) {
+                    localStorage.setItem('lastPlayingId', j.track_id);
+                    if (j.title) localStorage.setItem('lastPlayingTitle', j.title);
+                    localStorage.removeItem('lastPlayingUrl');
+                    if (j.queue_source && j.queue_index >= 0) {
+                        autoNextSource = j.queue_source;
+                        autoNextIndex = j.queue_index;
+                        localStorage.setItem('autoNextSource', autoNextSource);
+                        localStorage.setItem('autoNextIndex', autoNextIndex);
+                    }
+                    loadTab('history');
+                }
                 var nowPlaying = (j.state === 'Playing' || j.state === 'Paused');
                 var isLoading = (j.state === 'ACQUIRING SIGNAL...');
                 if (wasPlaying && !nowPlaying && !isLoading && !j.error && !j.is_live) {
                     loadTab('history');
-                    autoPlayNext();
                 }
                 // Don't update wasPlaying during loading — preserve the Playing state
                 if (!isLoading) {
@@ -1231,9 +1224,6 @@
                 }
                 // Track whether something is actively playing
                 isPlaying = nowPlaying;
-                // Current track is up and resolving is done -- good time to
-                // pre-resolve the next track in the background.
-                if (j.state === 'Playing' && !j.is_live) preresolveNext();
                 vizActive = (j.state === 'Playing');
                 vizScanning = isLoading;
                 updatePlayPauseBtn();
