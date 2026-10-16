@@ -366,11 +366,13 @@ def watch_player(proc, generation):
             else:
                 state.last_error = "Playback failed (exit code {})".format(proc.returncode)
         elif (proc.returncode == 0 and state.player_process is proc
-              and not state.is_live and state.auto_next
-              and 0 <= state.queue_index < len(state.queue) - 1):
+              and not state.is_live):
             # Track ran to the end (-autoexit) -- not killed by stop/seek/skip,
             # which either bump the generation or swap player_process.
-            next_index = state.queue_index + 1
+            if state.auto_next and 0 <= state.queue_index < len(state.queue) - 1:
+                next_index = state.queue_index + 1
+            print("[AUTO-NEXT] track ended: auto_next={} index={} queue={} -> next={}".format(
+                state.auto_next, state.queue_index, len(state.queue), next_index), flush=True)
 
     if next_index >= 0:
         play_queue_index(next_index, generation)

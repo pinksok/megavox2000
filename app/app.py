@@ -17,7 +17,7 @@ import json
 from player import stop_player, start_playback, toggle_pause_internal, seek_to, _pulse_env, preresolve
 from auth import auth_bp
 from library import library_bp
-from config import VOLUME_FILE, DEFAULT_VOLUME
+from config import VOLUME_FILE, DEFAULT_VOLUME, HISTORY_MAX
 from wifi_setup import setup_bp, is_setup_mode
 
 app = Flask(__name__)
@@ -68,6 +68,21 @@ def index():
     return render_template("index.html")
 
 
+def _history_queue(track_id):
+    """Auto-next queue for a play that brought none (Play button resume,
+    pasted URL, boot auto-resume): local history, newest first. Returns
+    (queue, index); ([], -1) when the track is unknown."""
+    from history import get_history
+    if not track_id:
+        return [], -1
+    tracks = get_history(HISTORY_MAX).get("tracks", [])
+    queue = [{"id": t["id"], "title": t.get("title", "")} for t in tracks if t.get("id")]
+    for i, t in enumerate(queue):
+        if t["id"] == track_id:
+            return queue, i
+    return [{"id": track_id, "title": ""}] + queue, 0
+
+
 @app.route("/play", methods=["POST"])
 def play():
     data = request.get_json()
@@ -86,7 +101,8 @@ def play():
 
     stop_player()
     # Auto-next queue: the list this track was picked from (see state.py).
-    # A request without one (pasted URL) clears it.
+    # A request without one (Play button resume, pasted URL) falls back to
+    # local history, so the box keeps going instead of stopping after one track.
     queue = data.get("queue")
     index = data.get("index")
     if isinstance(queue, list) and isinstance(index, int) and 0 <= index < len(queue):
@@ -95,11 +111,15 @@ def play():
         state.queue_index = index if index < len(state.queue) else -1
         state.queue_source = data.get("source")
     else:
-        state.queue = []
-        state.queue_index = -1
-        state.queue_source = None
+        svc = services.get_service()
+        track_id = data.get("id") or (svc.parse_track_id(url) if svc else None)
+        state.queue, state.queue_index = _history_queue(track_id)
+        state.queue_source = "history" if state.queue_index >= 0 else None
     if "auto_next" in data:
         state.auto_next = bool(data["auto_next"])
+    print("[PLAY] {} queue={} index={} source={} auto_next={}".format(
+        data.get("id") or url, len(state.queue), state.queue_index,
+        state.queue_source, state.auto_next), flush=True)
     state.current_track_id = data.get("id", "")
     state.last_error = ""
     state.current_title = data.get("title", "")
@@ -344,6 +364,9 @@ def _auto_resume():
         subprocess.run(['killall', '-9', 'ffplay'], capture_output=True)
         print("[AUTO-RESUME] Playing: {}".format(title), flush=True)
         stop_player()
+        state.queue, state.queue_index = _history_queue(track_id)
+        state.queue_source = "history" if state.queue_index >= 0 else None
+        state.current_track_id = track_id
         state.current_title = title
         state.loading = True
         start_playback(url)

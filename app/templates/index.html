@@ -708,11 +708,24 @@
             // asleep. (Without a matching queue the Pi clears its queue.)
             var payload = {id: id, title: title, auto_next: autoNextEnabled};
             var qTracks = (autoNextSource === 'playlist') ? currentPlaylistTracks : tabData[autoNextSource];
-            if (autoNextSource && qTracks && autoNextIndex >= 0 &&
-                    autoNextIndex < qTracks.length && qTracks[autoNextIndex].id === id) {
-                payload.queue = qTracks.map(function(t) { return {id: t.id, title: t.title}; });
-                payload.index = autoNextIndex;
-                payload.source = autoNextSource;
+            if (autoNextSource && qTracks && qTracks.length) {
+                // The Play button resumes with no list position, and a saved
+                // index goes stale once history reorders -- find it by id.
+                var qIdx = -1;
+                if (autoNextIndex >= 0 && autoNextIndex < qTracks.length && qTracks[autoNextIndex].id === id) {
+                    qIdx = autoNextIndex;
+                } else {
+                    for (var qi = 0; qi < qTracks.length; qi++) {
+                        if (qTracks[qi].id === id) { qIdx = qi; break; }
+                    }
+                }
+                if (qIdx >= 0) {
+                    autoNextIndex = qIdx;
+                    localStorage.setItem('autoNextIndex', qIdx);
+                    payload.queue = qTracks.map(function(t) { return {id: t.id, title: t.title}; });
+                    payload.index = qIdx;
+                    payload.source = autoNextSource;
+                }
             }
             api('/play', payload);
             // Refresh history after backend has time to resolve and log

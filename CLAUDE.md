@@ -92,8 +92,11 @@ backgrounded page, so the song ended unseen and nothing played next. Now
 `index`, `source`, `auto_next`) and the Pi keeps it in `state.queue`.
 `watch_player()` starts `queue[queue_index + 1]` itself when ffplay exits 0 and
 it is still the current process (stop/seek/skip bump the generation or swap
-`player_process`, so they never trigger it). A `/play` without a queue (pasted
-URL) clears it. `/status` reports `track_id`/`queue_index`/`queue_source` so
+`player_process`, so they never trigger it). A `/play` without a queue (Play
+button resume, pasted URL) and the boot auto-resume fall back to local history
+as the queue (`_history_queue()` in `app.py`) -- before that fallback, the Play
+button sent no queue and auto-next silently never fired. The journal logs
+`[PLAY] ... queue= index=` and `[AUTO-NEXT] track ended ...` for diagnosis. `/status` reports `track_id`/`queue_index`/`queue_source` so
 the page follows along; `/autonext {enabled}` mirrors the checkbox.
 
 ### Next-track pre-resolve (instant auto-next/skip)
