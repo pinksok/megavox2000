@@ -156,6 +156,14 @@ def preresolve_route():
 
 @app.route("/pause", methods=["POST"])
 def pause_route():
+    # Nothing loaded: start the last played track, as the web UI's Play button
+    # does from the browser, so remotes (Home Assistant) can press Play too.
+    if not (state.player_process and state.player_process.poll() is None) and not state.loading:
+        url, title = _prepare_last_played("PLAY")
+        if url:
+            threading.Thread(target=start_playback, args=(url,), daemon=True).start()
+            return jsonify({"status": "ACQUIRING SIGNAL...", "title": title, "paused": False})
+        return jsonify({"status": "Nothing playing", "paused": False})
     toggle_pause_internal()
     if state.player_process and state.player_process.poll() is None:
         status_text = "Paused" if state.paused else "Playing"
@@ -365,9 +373,36 @@ def _restore_volume():
         pass
 
 
+def _prepare_last_played(tag):
+    """Set up the most recent history track to play, with history as its
+    auto-next queue. Used by boot auto-resume and by Play with nothing loaded.
+    Returns (url, title) for start_playback(), or (None, None) without history."""
+    from history import get_history
+    tracks = get_history(1).get("tracks", [])
+    if not tracks or not tracks[0].get("id"):
+        return None, None
+    svc = services.get_service()
+    if not svc:
+        return None, None
+    track_id = tracks[0]["id"]
+    title = tracks[0].get("title", "")
+    url = svc.build_url(track_id)
+    # Kill any orphaned ffplay first
+    subprocess.run(['killall', '-9', 'ffplay'], capture_output=True)
+    print("[{}] Playing: {}".format(tag, title), flush=True)
+    stop_player()
+    state.queue, state.queue_index = _history_queue(track_id)
+    state.queue_source = "history" if state.queue_index >= 0 else None
+    state.current_track_id = track_id
+    state.current_title = title
+    state.last_error = ""
+    state.paused = False
+    state.loading = True
+    return url, title
+
+
 def _auto_resume():
     """Auto-resume the last played track after boot."""
-    from history import get_history
     from wifi_setup import is_setup_mode
     time.sleep(10)  # Wait for PulseAudio and network
     if is_setup_mode():
@@ -377,29 +412,9 @@ def _auto_resume():
         print("[AUTO-RESUME] Skipped — already playing.", flush=True)
         return
     try:
-        history = get_history(1)
-        tracks = history.get("tracks", [])
-        if not tracks:
-            return
-        track = tracks[0]
-        track_id = track.get("id")
-        title = track.get("title", "")
-        if not track_id:
-            return
-        svc = services.get_service()
-        if not svc:
-            return
-        url = svc.build_url(track_id)
-        # Kill any orphaned ffplay before auto-resume
-        subprocess.run(['killall', '-9', 'ffplay'], capture_output=True)
-        print("[AUTO-RESUME] Playing: {}".format(title), flush=True)
-        stop_player()
-        state.queue, state.queue_index = _history_queue(track_id)
-        state.queue_source = "history" if state.queue_index >= 0 else None
-        state.current_track_id = track_id
-        state.current_title = title
-        state.loading = True
-        start_playback(url)
+        url, _ = _prepare_last_played("AUTO-RESUME")
+        if url:
+            start_playback(url)
     except Exception as e:
         print("[AUTO-RESUME] Error: {}".format(e), flush=True)
 

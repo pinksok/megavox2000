@@ -101,7 +101,9 @@ the page follows along; `/autonext {enabled}` mirrors the checkbox.
 `POST /next` and `POST /previous` skip through that same server-side queue for
 remotes (Home Assistant's MegaVox tab); `/previous` restarts the track first if
 it is >3s in, like the web UI's back button. The web UI itself still skips from
-its own list.
+its own list. `POST /pause` with nothing loaded starts the last history track
+(`_prepare_last_played()`, shared with boot auto-resume) so a remote's Play
+button works from idle; the web UI handles idle Play itself via `/play`.
 
 ### Next-track pre-resolve (instant auto-next/skip)
 5s after a track starts, `_preresolve_next()` resolves the next queued track in
