@@ -14,7 +14,7 @@ import service_youtube
 import service_spotify
 import service_pandora
 import json
-from player import stop_player, start_playback, toggle_pause_internal, seek_to, _pulse_env, preresolve
+from player import stop_player, start_playback, toggle_pause_internal, seek_to, _pulse_env, preresolve, play_queue_index
 from auth import auth_bp
 from library import library_bp
 from config import VOLUME_FILE, DEFAULT_VOLUME, HISTORY_MAX
@@ -261,6 +261,36 @@ def autonext_route():
     data = request.get_json() or {}
     state.auto_next = bool(data.get("enabled", True))
     return jsonify({"auto_next": state.auto_next})
+
+
+def _skip(step):
+    """Play the queue entry `step` away from the current one."""
+    index = state.queue_index + step
+    if state.queue_index < 0 or not 0 <= index < len(state.queue):
+        return jsonify({"error": "No {} track".format("next" if step > 0 else "previous")})
+    track = state.queue[index]
+    play_queue_index(index)
+    return jsonify({"status": "ACQUIRING SIGNAL...", "title": track.get("title", ""), "queue_index": index})
+
+
+# Server-side skip for remotes such as Home Assistant. The web UI skips from
+# its own track list instead; these walk the Pi's queue (the one auto-next uses).
+@app.route("/next", methods=["POST"])
+def next_route():
+    return _skip(1)
+
+
+@app.route("/previous", methods=["POST"])
+def previous_route():
+    # Like the web UI's back button: restart the track if it is more than a
+    # few seconds in, otherwise go to the previous one.
+    if state.player_process and state.player_process.poll() is None and not state.is_live:
+        elapsed = state.playback_elapsed
+        if state.playback_start_time and not state.paused:
+            elapsed += time.time() - state.playback_start_time
+        if elapsed > 3 and seek_to(0):
+            return jsonify({"status": "Restarted track"})
+    return _skip(-1)
 
 
 @app.route("/wifi-signal")

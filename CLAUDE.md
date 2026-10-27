@@ -98,6 +98,10 @@ as the queue (`_history_queue()` in `app.py`) -- before that fallback, the Play
 button sent no queue and auto-next silently never fired. The journal logs
 `[PLAY] ... queue= index=` and `[AUTO-NEXT] track ended ...` for diagnosis. `/status` reports `track_id`/`queue_index`/`queue_source` so
 the page follows along; `/autonext {enabled}` mirrors the checkbox.
+`POST /next` and `POST /previous` skip through that same server-side queue for
+remotes (Home Assistant's MegaVox tab); `/previous` restarts the track first if
+it is >3s in, like the web UI's back button. The web UI itself still skips from
+its own list.
 
 ### Next-track pre-resolve (instant auto-next/skip)
 5s after a track starts, `_preresolve_next()` resolves the next queued track in
