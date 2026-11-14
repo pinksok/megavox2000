@@ -11,23 +11,22 @@ import state
 from history import log_to_history
 
 
-# YouTube player clients to try, in order. yt-dlp walks this list and uses the
-# first that yields a usable format, so one client having a bad day no longer
-# takes playback down.
-#
-# Do NOT let this fall back to yt-dlp's own default pick: that chooses
-# android_vr, whose URLs resolve fine but 403 at byte 0 on the real media fetch
-# (yt-dlp's own downloader fails too, so it is not a player-flag problem).
+# YouTube player clients to try. yt-dlp merges formats from every client in
+# the list and "-f bestaudio/best" picks the best one, so a client that has
+# lost its audio-only formats still serves as a fallback.
 #
 # Verified by actually downloading bytes -- resolution succeeding does NOT mean
-# the audio is fetchable, so test with --download-sections, not -g:
-#   mweb        both test tracks OK
-#   android     both test tracks OK
-#   web_safari  intermittent -- storyboard-only on some tracks
-#   web         fails on some tracks ("Requested format is not available")
-#   tv_embedded resolves but download fails
-#   ios         no audio formats at all
-YOUTUBE_PLAYER_CLIENTS = "mweb,android,web_safari,web"
+# the audio is fetchable, so test a ranged fetch of the URL, not just -g.
+#
+# 2026-11-13, yt-dlp 2026.10.26 + yt-dlp-ejs (node), 4-12 recent tracks:
+#   web_embedded  audio-only opus (itag 251) on every track, fetch OK, ~20-35s
+#   mweb          audio-only formats skipped (wants a GVS PO token); still
+#                 gives the 360p combined itag 18, fetch OK -> kept as fallback
+#                 for videos that disallow embedding
+#   android, web_safari, web   SABR-only, no direct URLs
+#   default (TVHTML)  works, but 403'd on 1 of 4 tracks
+#   android_vr, tv, tv_simply, web_music, ios   no audio
+YOUTUBE_PLAYER_CLIENTS = "web_embedded,mweb"
 
 
 def yt_dlp_base_args():
