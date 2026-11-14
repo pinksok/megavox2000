@@ -132,7 +132,7 @@ PulseAudio environment uses `os.getuid()` instead of hardcoded UID 1000. Works r
 
 ### Pi 3 optimized (main branch)
 - ffplay: `-analyzeduration 500000 -probesize 1000000` (reduced from Pi 5 values)
-- yt-dlp: 45s timeout (increased from 30s for slower CPU)
+- yt-dlp timeouts (`player.py`): 90s per `resolve_url()` attempt (it retries once without `-f bestaudio/best`), 30s for the `_check_is_live()` probe, 120s for `fetch_playlist()`. 90s leaves room for the QuickJS fallback and mega2's slow Wi-Fi (~40s typical there)
 - yt-dlp path: `yt-dlp` (PATH resolution, not hardcoded `/usr/local/bin/`)
 
 ### Live stream support (WIP -- NOT WORKING)
