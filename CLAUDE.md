@@ -83,6 +83,16 @@ ytmusicapi's OAuth is broken (HTTP 400 on all calls). We bypass it entirely and 
 yt-dlp handles audio URL resolution. This is a SEPARATE auth path from the OAuth/Data API above -- OAuth tokens do NOT apply to yt-dlp. As of 2026 YouTube demands two things or playback fails:
 - **Cookies** (`app/cookies.txt`, browser-exported Netscape format, gitignored) to pass the "confirm you're not a bot" wall. `yt_dlp_base_args()` in `player.py` auto-appends `--cookies` when the file exists. Cookies expire (days-weeks); `_bot_check_message()` surfaces an "expired" message to the UI. See README "YouTube cookies" for the export routine.
 - **A JS challenge solver** for the "n challenge": a JS runtime + `yt-dlp[default]` pip (bundles `yt-dlp-ejs`). Primary runtime is **Node v22** (armv6l build from unofficial-builds.nodejs.org installed to `/opt`, symlinked at `/usr/local/bin/node` -- Debian's apt `nodejs` is v20, below yt-dlp's required v22, and Deno has no 32-bit ARM build). V8's JIT solves the challenge in ~2s vs ~60s interpreted by QuickJS, cutting track resolution from ~75-90s to ~18-20s on a Pi 3. The `quickjs` apt package stays installed as a fallback runtime. Runtime flags: `--js-runtimes node --js-runtimes quickjs` (see `yt_dlp_base_args()`). `resolve_url()` keeps a 90s timeout so the QuickJS fallback path still fits.
+  - **Node build differs per unit**: mega has a 32-bit (armhf) userland and uses the armv6l unofficial build; **mega2 is a Pi 3B with a 64-bit (arm64) userland** and uses the official `node-v22.x-linux-arm64.tar.xz` from nodejs.org, same `/opt` + `/usr/local/bin/node` symlink. Check with `dpkg --print-architecture`. If `yt-dlp -v` shows `JS runtimes: node-20.x (unsupported)`, the symlink is missing and every track fails with "Requested format is not available".
+
+### Keep yt-dlp current (YouTube breaks old versions)
+YouTube changes regularly break old yt-dlp releases. On 2026-11-13 a 4-month-old yt-dlp (2026.07.04) on mega, plus the client list of the time, left every track on the 360p combined itag 18 (~30-80s to resolve), and mega2 (2026.03.17, node 20) could not play at all. Update on **each unit** (it's a system pip install, not in git; no restart needed since yt-dlp runs per track):
+```
+sudo pip install -U --break-system-packages "yt-dlp[default]"
+```
+- **Stale symptoms**: `yt-dlp -v` warns "older than 90 days"; warnings like "formats require a GVS PO Token" / "SABR-only streaming" / "Only images are available"; tracks skipping or "URL resolution timed out".
+- **Player clients** (`YOUTUBE_PLAYER_CLIENTS` in `player.py`) are tied to what YouTube allows at the time. When updating yt-dlp doesn't fix it, re-test clients by fetching bytes from the resolved URL (`curl -r 0-300000 "$url"` -> expect 206), not just `-g`. The comment above the constant records the last test.
+- **Test a unit end-to-end** without playing anything: `cd ~/megavox2000/app && python3 -c "import player; print(player.resolve_url('https://www.youtube.com/watch?v=7PP-J9vL3GE'))"` -> expect a URL with `itag=251`, no error. mega ~22s; mega2 ~40s (weak garage Wi-Fi).
 
 ### Auto-next runs on the Pi, not in the browser
 The frontend used to drive auto-next by polling `/status` and POSTing the next
@@ -248,7 +258,8 @@ luma.lcd Pillow
 ```bash
 # System packages:
 python3-flask python3-dbus python3-gi python3-requests ffmpeg
-pipewire pipewire-pulse wireplumber nodejs quickjs
+pipewire pipewire-pulse wireplumber quickjs
+# Node v22+ from nodejs.org into /opt (NOT apt nodejs, which is v20) -- see "yt-dlp playback auth"
 
 # pip packages:
 yt-dlp[default] qrcode ytmusicapi   # [default] pulls in yt-dlp-ejs (JS challenge solver)
