@@ -12,7 +12,7 @@ from history import log_to_history
 
 
 # YouTube player clients to try. yt-dlp merges formats from every client in
-# the list and "-f bestaudio/best" picks the best one, so a client that has
+# the list and YOUTUBE_FORMAT picks the best one, so a client that has
 # lost its audio-only formats still serves as a fallback.
 #
 # Verified by actually downloading bytes -- resolution succeeding does NOT mean
@@ -26,7 +26,18 @@ from history import log_to_history
 #   android, web_safari, web   SABR-only, no direct URLs
 #   default (TVHTML)  works, but 403'd on 1 of 4 tracks
 #   android_vr, tv, tv_simply, web_music, ios   no audio
+#
+# 2026-11-24, yt-dlp 2026.11.23 (2026.10.26's solver crashed on YouTube's new
+# player b485e332, so every track failed): audio-only formats are now SABR-only
+# on EVERY client (web_embedded, mweb, web, web_safari, tv_simply, ios,
+# android_vr; tv errors). What is left is the 360p combined itag 18 (full fetch
+# OK) and HLS m3u8 up to 1080p. See YOUTUBE_FORMAT for how that is picked.
 YOUTUBE_PLAYER_CLIENTS = "web_embedded,mweb"
+
+# Audio-only when YouTube offers it; otherwise the 360p combined itag 18 (AAC
+# 44kHz audio, ~0.5 Mbps total). Plain "best" would pick the 1080p HLS stream
+# (~5 Mbps) and make the Pi 3 download all that video just for the audio.
+YOUTUBE_FORMAT = "bestaudio/18/best[height<=480]/best"
 
 
 def yt_dlp_base_args():
@@ -109,7 +120,7 @@ def resolve_url(url):
     try:
         result = subprocess.run(
             yt_dlp_base_args() + [
-                "-f", "bestaudio/best",
+                "-f", YOUTUBE_FORMAT,
                 "--no-playlist",
                 "-g",
                 "--get-title",

@@ -92,7 +92,7 @@ sudo pip install -U --break-system-packages "yt-dlp[default]"
 ```
 - **Stale symptoms**: `yt-dlp -v` warns "older than 90 days"; warnings like "formats require a GVS PO Token" / "SABR-only streaming" / "Only images are available"; tracks skipping or "URL resolution timed out".
 - **Player clients** (`YOUTUBE_PLAYER_CLIENTS` in `player.py`) are tied to what YouTube allows at the time. When updating yt-dlp doesn't fix it, re-test clients by fetching bytes from the resolved URL (`curl -r 0-300000 "$url"` -> expect 206), not just `-g`. The comment above the constant records the last test.
-- **Test a unit end-to-end** without playing anything: `cd ~/megavox2000/app && python3 -c "import player; print(player.resolve_url('https://www.youtube.com/watch?v=7PP-J9vL3GE'))"` -> expect a URL with `itag=251`, no error. mega ~22s; mega2 ~40s (weak garage Wi-Fi).
+- **Test a unit end-to-end** without playing anything: `cd ~/megavox2000/app && python3 -c "import player; print(player.resolve_url('https://www.youtube.com/watch?v=7PP-J9vL3GE'))"` -> expect a URL with `itag=251` (audio-only), or `itag=18` while YouTube keeps audio-only SABR-gated (the case since 2026-11-24), no error. A `manifest.googlevideo.com/.../hls_playlist` URL means the format selector fell through to HLS video. mega ~22s; mega2 ~40s (weak garage Wi-Fi).
 
 ### Auto-next runs on the Pi, not in the browser
 The frontend used to drive auto-next by polling `/status` and POSTing the next
